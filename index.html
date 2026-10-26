@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EasyChat Discord 商業級聊天室</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts (Fredoka & Noto Sans TC) -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- React & ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- External Utilities for Exporting -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cream: {
+                            50: '#FDFBF7',
+                            100: '#FBF9F4',
+                            200: '#F3EFE6',
+                            300: '#E6DFC8',
+                            400: '#D5C8A5'
+                        },
+                        cute: {
+                            purple: '#6C5CE7',
+                            pink: '#FF7675',
+                            yellow: '#FFEAA7',
+                            green: '#00B894',
+                            blue: '#74B9FF',
+                            lavender: '#A29BFE'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Fredoka', 'Noto Sans TC', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #FBF9F4;
+            font-family: 'Fredoka', 'Noto Sans TC', sans-serif;
+            user-select: none;
+        }
+        /* Custom Scrollbar for cute aesthetic */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #F3EFE6;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #A29BFE;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6C5CE7;
+        }
+        .chat-bubble-left {
+            border-radius: 18px 18px 18px 4px;
+        }
+        .chat-bubble-right {
+            border-radius: 18px 18px 4px 18px;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(230, 223, 200, 0.6);
+        }
+    </style>
+</head>
+<body class="h-screen overflow-hidden text-slate-700">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // Firebase Setup with Provided Config
+        const firebaseConfig = {
+            apiKey: "AIzaSyAc2DCat3WPv-vXt2kl4vIVla6qzMrUDJw",
+            authDomain: "easychat-c8050.firebaseapp.com",
+            projectId: "easychat-c8050",
+            storageBucket: "easychat-c8050.firebasestorage.app",
+            messagingSenderId: "960061584785",
+            appId: "1:960061584785:web:b9d8ba00a4daca9d319630",
+            measurementId: "G-CRQLYL3FHE",
+            databaseURL: "https://easychat-c8050-default-rtdb.firebaseio.com" // Default fallback RTDB URL pattern
+        };
+
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+
+        const auth = firebase.auth();
+        const db = firebase.database();
+
+        // Preset GIFs and Emojis
+        const EMOJI_LIST = ['🐱', '🌸', '✨', '🔥', '🚀', '🎉', '💖', '🍭', '🎀', '🧸', '🌈', '⭐', '🍕', '🎮', '🎧', '☕', '🍦', '🐣'];
+        const GIF_LIST = [
+            'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3Y5bmRteGtwZDcxM3o4NHR1dmw3MjlsMnRqZDNscHZxdmd1bjVnayZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/C21GGDOpKT6Z4VuXyn/giphy.gif',
+            'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbnZxa3Z0dHBtZnBrYWhzbWF4NXA0dHdianNldmdxdDVhNmxsajdpZCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/l41K3o5TKSFi82SW4/giphy.gif',
+            'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExdzcydnl2dmR5OGg4eXZoYnd2dmkyZGJwOHR5MnB2dnRqbzJ4dHk1cCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/l0HlHFRbmaZtBRhXG/giphy.gif',
+            'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExaWVmZm9rdndwMXdmeWN2OHM3b3VlZXlzYXo3NTEzMDJndzBvaGlmZyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7TKMt1VVNkHV2PaE/giphy.gif'
+        ];
+
+        function App() {
+            // App state
+            const [user, setUser] = useState(null);
+            const [nickname, setNickname] = useState('');
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+            const [isRegistering, setIsRegistering] = useState(false);
+
+            // Room Code state
+            const [roomCode, setRoomCode] = useState('');
+            const [inRoom, setInRoom] = useState(false);
+
+            // Chat & Navigation
+            const [activeChannel, setActiveChannel] = useState('general'); // 'general', 'dj', 'analytics', 'stickers'
+            const [messages, setMessages] = useState([]);
+            const [inputMsg, setInputMsg] = useState('');
+            const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+            const [showGifPicker, setShowGifPicker] = useState(false);
+            
+            // System states
+            const [isConnected, setIsConnected] = useState(navigator.onLine);
+            const [lastSaveTime, setLastSaveTime] = useState('尚無記錄');
+            const [onlineUsers, setOnlineUsers] = useState({});
+            const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+            // DJ Player State
+            const [youtubeUrl, setYoutubeUrl] = useState('');
+            const [currentVid, setCurrentVid] = useState('5qap5aO4i9A'); // Lofi girl default
+
+            // Chart Reference
+            const chartRef = useRef(null);
+            const chartInstance = useRef(null);
+            const exportAreaRef = useRef(null);
+
+            // 1. Connection Monitoring & Auth State Listeners
+            useEffect(() => {
+                const handleOnline = () => setIsConnected(true);
+                const handleOffline = () => setIsConnected(false);
+                window.addEventListener('online', handleOnline);
+                window.addEventListener('offline', handleOffline);
+
+                const unsubscribe = auth.onAuthStateChanged((currUser) => {
+                    if (currUser) {
+                        setUser(currUser);
+                        // Record user presence in database
+                        const userRef = db.ref(`rooms/${roomCode || 'default'}/users/${currUser.uid}`);
+                        userRef.set({
+                            displayName: currUser.displayName || nickname || '萌新成員',
+                            email: currUser.email,
+                            online: true,
+                            lastSeen: Date.now()
+                        });
+                        userRef.onDisconnect().remove();
+                    } else {
+                        setUser(null);
+                    }
+                });
+
+                return () => {
+                    window.removeEventListener('online', handleOnline);
+                    window.removeEventListener('offline', handleOffline);
+                    unsubscribe();
+                };
+            }, [roomCode, nickname]);
+
+            // 2. Realtime Database Message Listener
+            useEffect(() => {
+                if (!inRoom || !roomCode) return;
+
+                const messagesRef = db.ref(`rooms/${roomCode}/messages`);
+                const handleData = (snapshot) => {
+                    const data = snapshot.val();
+                    if (data) {
+                        const msgList = Object.keys(data).map(key => ({
+                            id: key,
+                            ...data[key]
+                        }));
+                        setMessages(msgList);
+                        setLastSaveTime(new Date().toLocaleString());
+                    } else {
+                        setMessages([]);
+                    }
+                };
+
+                messagesRef.on('value', handleData);
+
+                // Listen to Online Users
+                const usersRef = db.ref(`rooms/${roomCode}/users`);
+                usersRef.on('value', (snapshot) => {
+                    setOnlineUsers(snapshot.val() || {});
+                });
+
+                return () => {
+                    messagesRef.off('value', handleData);
+                    usersRef.off('value');
+                };
+            }, [inRoom, roomCode]);
+
+            // Chart Rendering logic when tab changes to Analytics
+            useEffect(() => {
+                if (activeChannel === 'analytics' && chartRef.current) {
+                    if (chartInstance.current) {
+                        chartInstance.current.destroy();
+                    }
+                    const ctx = chartRef.current.getContext('2d');
+                    
+                    // Group messages by hour
+                    const hours = Array(24).fill(0);
+                    messages.forEach(m => {
+                        const date = new Date(m.timestamp);
+                        hours[date.getHours()] += 1;
+                    });
+
+                    chartInstance.current = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: Array.from({length: 24}, (_, i) => `${i}:00`),
+                            datasets: [{
+                                label: '訊息發送頻率',
+                                data: hours,
+                                backgroundColor: '#A29BFE',
+                                borderColor: '#6C5CE7',
+                                borderWidth: 2,
+                                borderRadius: 8
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { labels: { font: { family: 'Fredoka' } } }
+                            }
+                        }
+                    });
+                }
+            }, [activeChannel, messages]);
+
+            // Handlers: Authentication
+            const handleAuth = async (e) => {
+                e.preventDefault();
+                try {
+                    if (isRegistering) {
+                        if (!nickname) {
+                            alert('請輸入用戶暱稱！');
+                            return;
+                        }
+                        const res = await auth.createUserWithEmailAndPassword(email, password);
+                        await res.user.updateProfile({ displayName: nickname });
+                        setUser(res.user);
+                    } else {
+                        await auth.signInWithEmailAndPassword(email, password);
+                    }
+                } catch (err) {
+                    alert('認證失敗: ' + err.message);
+                }
+            };
+
+            // Handlers: Enter Room
+            const handleEnterRoom = (e) => {
+                e.preventDefault();
+                if (/^\d{3}$/.test(roomCode)) {
+                    setInRoom(true);
+                } else {
+                    alert('請輸入 3 位數字的房間號碼 (例如 101, 777, 888)');
+                }
+            };
+
+            // Handlers: Send Message
+            const handleSendMessage = async (text = inputMsg, type = 'text') => {
+                if (!text.trim() && type === 'text') return;
+                if (!user) return;
+
+                const msgObj = {
+                    senderId: user.uid,
+                    senderName: user.displayName || '萌新成員',
+                    content: text,
+                    type: type,
+                    timestamp: Date.now()
+                };
+
+                await db.ref(`rooms/${roomCode}/messages`).push(msgObj);
+                setInputMsg('');
+                setShowEmojiPicker(false);
+                setShowGifPicker(false);
+                setLastSaveTime(new Date().toLocaleString());
+            };
+
+            // Handlers: Clear Messages
+            const handleClearHistory = async () => {
+                if (window.confirm('確定要清空此房間的所有歷史訊息嗎？此動作無法復原！')) {
+                    await db.ref(`rooms/${roomCode}/messages`).remove();
+                    setLastSaveTime(new Date().toLocaleString());
+                }
+            };
+
+            // Export Data Functions
+            const exportToExcel = () => {
+                const dataToExport = messages.map(m => ({
+                    '發送者': m.senderName,
+                    '內容': m.content,
+                    '類型': m.type,
+                    '時間': new Date(m.timestamp).toLocaleString()
+                }));
+                const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+                const workbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(workbook, worksheet, "聊天紀錄");
+                XLSX.writeFile(workbook, `EasyChat_Room_${roomCode}_Export.xlsx`);
+            };
+
+            const importFromExcel = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    const bstr = evt.target.result;
+                    const workbook = XLSX.read(bstr, { type: 'binary' });
+                    const wsName = workbook.SheetNames[0];
+                    const ws = workbook.Sheets[wsName];
+                    const data = XLSX.utils.sheet_to_json(ws);
+
+                    data.forEach(async (row) => {
+                        if (row['內容'] && row['發送者']) {
+                            await db.ref(`rooms/${roomCode}/messages`).push({
+                                senderId: 'imported',
+                                senderName: row['發送者'],
+                                content: row['內容'],
+                                type: row['類型'] || 'text',
+                                timestamp: Date.now()
+                            });
+                        }
+                    });
+                    alert('Excel 資料已成功匯入 Firebase！');
+                };
+                reader.readAsBinaryString(file);
+            };
+
+            const exportHighResPNG = () => {
+                if (!exportAreaRef.current) return;
+                html2canvas(exportAreaRef.current, { scale: 2 }).then(canvas => {
+                    const link = document.createElement('a');
+                    link.download = `EasyChat_Dashboard_${roomCode}.png`;
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                });
+            };
+
+            const exportPDF = () => {
+                if (!exportAreaRef.current) return;
+                html2canvas(exportAreaRef.current, { scale: 2 }).then(canvas => {
+                    const imgData = canvas.toDataURL('image/png');
+                    const { jsPDF } = window.jspdf;
+                    const pdf = new jsPDF('p', 'mm', 'a4');
+                    const imgProps = pdf.getImageProperties(imgData);
+                    const pdfWidth = pdf.internal.pageSize.getWidth();
+                    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+                    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+                    pdf.save(`EasyChat_Report_${roomCode}.pdf`);
+                });
+            };
+
+            // Extract YouTube Video ID
+            const playYoutube = () => {
+                const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+                const match = youtubeUrl.match(regExp);
+                if (match && match[2].length === 11) {
+                    setCurrentVid(match[2]);
+                    setYoutubeUrl('');
+                } else {
+                    alert('請輸入有效的 YouTube 影片網址！');
+                }
+            };
+
+            // Download Emoji Pack helper
+            const downloadEmojiPack = () => {
+                const content = EMOJI_LIST.join(' ');
+                const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = "Cute_Emoji_Pack.txt";
+                link.click();
+            };
+
+            // ---------------- VIEW RENDERINGS ---------------- //
+
+            // 1. Auth View
+            if (!user) {
+                return (
+                    <div className="flex items-center justify-center h-screen bg-cream-100 p-4">
+                        <div className="bg-white p-8 rounded-3xl shadow-xl w-full max-w-md border border-cream-200 text-center">
+                            <div className="w-20 h-20 bg-cute-lavender text-white rounded-full flex items-center justify-center text-4xl mx-auto mb-4 shadow-lg">
+                                🐱
+                            </div>
+                            <h1 className="text-3xl font-bold text-slate-800 mb-2">EasyChat Discord</h1>
+                            <p className="text-slate-500 mb-6 text-sm">可愛溫馨、商業級即時對話社群平台</p>
+                            
+                            <form onSubmit={handleAuth} className="space-y-4 text-left">
+                                {isRegistering && (
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-600 mb-1">暱稱 (無須審核)</label>
+                                        <input 
+                                            type="text" 
+                                            required 
+                                            placeholder="請輸入可愛暱稱..." 
+                                            className="w-full px-4 py-3 rounded-xl bg-cream-50 border border-cream-300 focus:outline-none focus:ring-2 focus:ring-cute-purple"
+                                            value={nickname}
+                                            onChange={(e) => setNickname(e.target.value)}
+                                        />
+                                    </div>
+                                )}
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-600 mb-1">電子郵件</label>
+                                    <input 
+                                        type="email" 
+                                        required 
+                                        placeholder="yourname@gmail.com" 
+                                        className="w-full px-4 py-3 rounded-xl bg-cream-50 border border-cream-300 focus:outline-none focus:ring-2 focus:ring-cute-purple"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-600 mb-1">密碼</label>
+                                    <input 
+                                        type="password" 
+                                        required 
+                                        placeholder="••••••••" 
+                                        className="w-full px-4 py-3 rounded-xl bg-cream-50 border border-cream-300 focus:outline-none focus:ring-2 focus:ring-cute-purple"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                    />
+                                </div>
+                                <button type="submit" className="w-full py-3 bg-cute-purple hover:bg-purple-700 text-white font-bold rounded-xl shadow-md transition transform active:scale-95">
+                                    {isRegistering ? '立即註冊並登入' : '登入 EasyChat'}
+                                </button>
+                            </form>
+
+                            <div className="mt-6 text-sm text-slate-500">
+                                {isRegistering ? '已有帳號？' : '還沒有帳號？'}
+                                <button 
+                                    onClick={() => setIsRegistering(!isRegistering)}
+                                    className="ml-2 font-bold text-cute-purple hover:underline"
+                                >
+                                    {isRegistering ? '直接登入' : '免費註冊'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            // 2. Room Selection Modal
+            if (!inRoom) {
+                return (
+                    <div className="flex items-center justify-center h-screen bg-cream-100 p-4">
+                        <div className="bg-white p-8 rounded-3xl shadow-xl w-full max-w-sm border border-cream-200 text-center">
+                            <div className="text-5xl mb-3">🗝️</div>
+                            <h2 className="text-2xl font-bold text-slate-800 mb-1">輸入房間號碼</h2>
+                            <p className="text-slate-500 mb-6 text-sm">請輸入 3 位數字進入專屬討論室 (如 101, 888)</p>
+                            
+                            <form onSubmit={handleEnterRoom} className="space-y-4">
+                                <input 
+                                    type="text" 
+                                    maxLength="3"
+                                    placeholder="888" 
+                                    className="w-full text-center text-3xl tracking-widest font-bold py-3 rounded-2xl bg-cream-50 border border-cream-300 focus:outline-none focus:ring-2 focus:ring-cute-purple text-cute-purple"
+                                    value={roomCode}
+                                    onChange={(e) => setRoomCode(e.target.value)}
+                                />
+                                <button type="submit" className="w-full py-3 bg-cute-purple hover:bg-purple-700 text-white font-bold rounded-xl shadow-md transition transform active:scale-95">
+                                    進入頻道 🚀
+                                </button>
+                            </form>
+                            <button onClick={() => auth.signOut()} className="mt-4 text-xs text-slate-400 hover:text-slate-600">
+                                登出當前帳號 ({user.email})
+                            </button>
+                        </div>
+                    </div>
+                );
+            }
+
+            // 3. Main Discord Main Application Interface
+            return (
+                <div className="flex h-screen bg-cream-100 text-slate-700 overflow-hidden relative">
+                    
+                    {/* LEFT SIDEBAR 1: Server List Icons */}
+                    <div className="w-16 bg-cream-200 border-r border-cream-300 flex flex-col items-center py-4 space-y-4 z-20 shrink-0">
+                        <div className="w-12 h-12 bg-cute-purple text-white rounded-2xl flex items-center justify-center font-bold text-xl shadow-md hover:rounded-xl transition-all cursor-pointer">
+                            💬
+                        </div>
+                        <div className="w-10 h-0.5 bg-cream-300 rounded"></div>
+                        <div className="w-12 h-12 bg-white text-cute-pink rounded-3xl flex items-center justify-center text-lg shadow-sm border border-cream-300 hover:rounded-xl transition-all cursor-pointer">
+                            #{roomCode}
+                        </div>
+                        <button 
+                            onClick={() => setInRoom(false)} 
+                            title="切換房間" 
+                            className="w-12 h-12 bg-cream-50 text-slate-500 hover:text-cute-purple rounded-3xl flex items-center justify-center text-lg border border-cream-300 transition-all hover:bg-white"
+                        >
+                            <i className="fa-solid fa-door-open"></i>
+                        </button>
+                    </div>
+
+                    {/* LEFT SIDEBAR 2: Channel List */}
+                    <div className={`fixed inset-y-0 left-16 z-10 w-60 bg-cream-50 border-r border-cream-300 flex flex-col transition-transform duration-300 md:static md:translate-x-0 ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+                        {/* Server Header */}
+                        <div className="p-4 border-b border-cream-200 flex items-center justify-between font-bold text-slate-800">
+                            <span>萌萌Discord房 #{roomCode}</span>
+                            <span className="text-xs bg-cute-purple text-white px-2 py-0.5 rounded-full">VIP</span>
+                        </div>
+
+                        {/* Connection & Save Status */}
+                        <div className="px-4 py-2 bg-cream-200/50 text-[11px] flex flex-col space-y-1">
+                            <div className="flex items-center space-x-2">
+                                <span className={`w-2.5 h-2.5 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></span>
+                                <span className="font-semibold">{isConnected ? '🟢 穩定連線中' : '🔴 斷線重連中'}</span>
+                            </div>
+                            <div className="text-slate-400 truncate">
+                                存檔時間: {lastSaveTime}
+                            </div>
+                        </div>
+
+                        {/* Channel Categories */}
+                        <div className="flex-1 overflow-y-auto p-3 space-y-6">
+                            <div>
+                                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 px-2">文字頻道</div>
+                                <div className="space-y-1">
+                                    <button 
+                                        onClick={() => { setActiveChannel('general'); setMobileSidebarOpen(false); }}
+                                        className={`w-full flex items-center px-3 py-2 rounded-xl text-sm font-semibold transition ${activeChannel === 'general' ? 'bg-cute-lavender/30 text-cute-purple' : 'hover:bg-cream-100 text-slate-600'}`}
+                                    >
+                                        <i className="fa-hash fa-hashtag mr-2 text-slate-400"></i> 大廳聊天室
+                                    </button>
+                                    <button 
+                                        onClick={() => { setActiveChannel('dj'); setMobileSidebarOpen(false); }}
+                                        className={`w-full flex items-center px-3 py-2 rounded-xl text-sm font-semibold transition ${activeChannel === 'dj' ? 'bg-cute-lavender/30 text-cute-purple' : 'hover:bg-cream-100 text-slate-600'}`}
+                                    >
+                                        <i className="fa-solid fa-compact-disc mr-2 text-cute-pink animate-spin-slow"></i> 派對 DJ 播音室
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 px-2">數據中心 & 擴充</div>
+                                <div className="space-y-1">
+                                    <button 
+                                        onClick={() => { setActiveChannel('analytics'); setMobileSidebarOpen(false); }}
+                                        className={`w-full flex items-center px-3 py-2 rounded-xl text-sm font-semibold transition ${activeChannel === 'analytics' ? 'bg-cute-lavender/30 text-cute-purple' : 'hover:bg-cream-100 text-slate-600'}`}
+                                    >
+                                        <i className="fa-solid fa-chart-pie mr-2 text-cute-blue"></i> 訊息統計圖表
+                                    </button>
+                                    <button 
+                                        onClick={() => { setActiveChannel('stickers'); setMobileSidebarOpen(false); }}
+                                        className={`w-full flex items-center px-3 py-2 rounded-xl text-sm font-semibold transition ${activeChannel === 'stickers' ? 'bg-cute-lavender/30 text-cute-purple' : 'hover:bg-cream-100 text-slate-600'}`}
+                                    >
+                                        <i className="fa-solid fa-face-smile mr-2 text-cute-yellow"></i> 表情包與GIF庫
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* User Bottom Status Card */}
+                        <div className="p-3 bg-cream-200/80 border-t border-cream-300 flex items-center justify-between">
+                            <div className="flex items-center space-x-2 truncate">
+                                <div className="w-8 h-8 bg-cute-purple text-white rounded-full flex items-center justify-center font-bold text-xs">
+                                    {user.displayName ? user.displayName[0] : 'U'}
+                                </div>
+                                <div className="truncate">
+                                    <div className="text-xs font-bold truncate text-slate-800">{user.displayName || '萌新成員'}</div>
+                                    <div className="text-[10px] text-slate-400 truncate">{user.email}</div>
+                                </div>
+                            </div>
+                            <button onClick={() => auth.signOut()} title="登出" className="text-slate-400 hover:text-red-500 p-1">
+                                <i className="fa-solid fa-right-from-bracket"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* MAIN CHAT & CONTENT AREA */}
+                    <div className="flex-1 flex flex-col h-full bg-white relative overflow-hidden" ref={exportAreaRef}>
+                        
+                        {/* Top Navbar */}
+                        <div className="h-14 border-b border-cream-200 px-4 flex items-center justify-between bg-cream-50/50">
+                            <div className="flex items-center space-x-3">
+                                <button className="md:hidden text-slate-600 text-xl" onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}>
+                                    <i className="fa-solid fa-bars"></i>
+                                </button>
+                                <span className="font-bold text-slate-800 text-lg flex items-center">
+                                    {activeChannel === 'general' && '💬 # 大廳聊天室'}
+                                    {activeChannel === 'dj' && '🎧 # 派對 DJ 播音室'}
+                                    {activeChannel === 'analytics' && '📊 # 訊息數據圖表分析'}
+                                    {activeChannel === 'stickers' && '🎨 # 表情貼圖寶庫'}
+                                </span>
+                            </div>
+
+                            {/* Utility Buttons: Import/Export Excel, PNG, PDF */}
+                            <div className="flex items-center space-x-2">
+                                <label title="匯入 Excel 紀錄" className="cursor-pointer bg-cream-200 hover:bg-cream-300 text-slate-700 px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center transition">
+                                    <i className="fa-solid fa-file-import mr-1 text-green-600"></i> 匯入
+                                    <input type="file" accept=".xlsx, .xls" onChange={importFromExcel} className="hidden" />
+                                </label>
+                                <button onClick={exportToExcel} title="匯出 Excel" className="bg-cream-200 hover:bg-cream-300 text-slate-700 px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center transition">
+                                    <i className="fa-solid fa-file-excel mr-1 text-green-600"></i> Excel
+                                </button>
+                                <button onClick={exportHighResPNG} title="匯出高畫質 PNG" className="bg-cream-200 hover:bg-cream-300 text-slate-700 px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center transition">
+                                    <i className="fa-solid fa-image mr-1 text-cute-purple"></i> PNG
+                                </button>
+                                <button onClick={exportPDF} title="匯出 PDF 報告" className="bg-cream-200 hover:bg-cream-300 text-slate-700 px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center transition">
+                                    <i className="fa-solid fa-file-pdf mr-1 text-red-500"></i> PDF
+                                </button>
+                                {activeChannel === 'general' && (
+                                    <button onClick={handleClearHistory} title="清空對話紀錄" className="bg-red-50 hover:bg-red-100 text-red-600 px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center transition ml-2">
+                                        <i className="fa-solid fa-trash-can mr-1"></i> 清除
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* BODY CONTENT DEPENDING ON ACTIVE CHANNEL */}
+                        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-cream-50/20">
+                            
+                            {/* 1. General Chat Channel */}
+                            {activeChannel === 'general' && (
+                                <div className="space-y-4 pb-4">
+                                    {messages.length === 0 ? (
+                                        <div className="text-center text-slate-400 my-12">
+                                            <div className="text-5xl mb-2">🐾</div>
+                                            <p>這裡還沒有任何訊息，快發個表情或訊息與大家招呼吧！</p>
+                                        </div>
+                                    ) : (
+                                        messages.map((msg) => {
+                                            const isMe = msg.senderId === user.uid;
+                                            return (
+                                                <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
+                                                    <div className="flex items-center space-x-2 mb-1 text-xs text-slate-400">
+                                                        <span className="font-bold text-slate-600">{msg.senderName}</span>
+                                                        <span>{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                    </div>
+                                                    
+                                                    {msg.type === 'gif' ? (
+                                                        <img src={msg.content} alt="GIF" className="max-w-xs rounded-2xl border-2 border-cream-200 shadow-sm" />
+                                                    ) : (
+                                                        <div className={`px-4 py-2.5 max-w-md text-sm shadow-sm ${isMe ? 'bg-cute-purple text-white chat-bubble-right' : 'bg-white border border-cream-200 text-slate-700 chat-bubble-left'}`}>
+                                                            {msg.content}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })
+                                    )}
+                                </div>
+                            )}
+
+                            {/* 2. DJ Background Music Room */}
+                            {activeChannel === 'dj' && (
+                                <div className="max-w-3xl mx-auto space-y-6">
+                                    <div className="bg-white p-6 rounded-3xl border border-cream-200 shadow-sm">
+                                        <h3 className="text-xl font-bold text-slate-800 mb-2 flex items-center">
+                                            <i className="fa-solid fa-compact-disc text-cute-pink mr-2"></i> 點歌後台 & YouTube 音樂播放器
+                                        </h3>
+                                        <p className="text-xs text-slate-500 mb-4">輸入任何 YouTube 影片網址，即時在頻道內播送好聽音樂！</p>
+                                        
+                                        <div className="flex space-x-2 mb-6">
+                                            <input 
+                                                type="text" 
+                                                placeholder="貼上 YouTube 影片網址 (例如 https://www.youtube.com/watch?v=...)" 
+                                                className="flex-1 px-4 py-2.5 rounded-xl border border-cream-300 text-sm focus:outline-none focus:ring-2 focus:ring-cute-purple bg-cream-50"
+                                                value={youtubeUrl}
+                                                onChange={(e) => setYoutubeUrl(e.target.value)}
+                                            />
+                                            <button onClick={playYoutube} className="px-5 py-2.5 bg-cute-pink hover:bg-pink-600 text-white font-bold text-sm rounded-xl shadow-sm transition">
+                                                播放歌曲
+                                            </button>
+                                        </div>
+
+                                        {/* Player Frame */}
+                                        <div className="aspect-video w-full rounded-2xl overflow-hidden border-2 border-cream-200 shadow-inner bg-black">
+                                            <iframe 
+                                                className="w-full h-full"
+                                                src={`https://www.youtube.com/embed/${currentVid}?autoplay=1`}
+                                                title="YouTube DJ Player"
+                                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                allowFullScreen
+                                            ></iframe>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 3. Analytics & Dashboard Channel */}
+                            {activeChannel === 'analytics' && (
+                                <div className="space-y-6 max-w-4xl mx-auto">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div className="bg-white p-5 rounded-2xl border border-cream-200 shadow-sm text-center">
+                                            <div className="text-slate-400 text-xs font-bold mb-1">總訊息發送數</div>
+                                            <div className="text-3xl font-bold text-cute-purple">{messages.length}</div>
+                                        </div>
+                                        <div className="bg-white p-5 rounded-2xl border border-cream-200 shadow-sm text-center">
+                                            <div className="text-slate-400 text-xs font-bold mb-1">當前在線成員</div>
+                                            <div className="text-3xl font-bold text-cute-green">{Object.keys(onlineUsers).length}</div>
+                                        </div>
+                                        <div className="bg-white p-5 rounded-2xl border border-cream-200 shadow-sm text-center">
+                                            <div className="text-slate-400 text-xs font-bold mb-1">房間號碼</div>
+                                            <div className="text-3xl font-bold text-cute-pink">#{roomCode}</div>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-white p-6 rounded-3xl border border-cream-200 shadow-sm">
+                                        <h3 className="text-lg font-bold text-slate-800 mb-4">全天對話熱度時段分析 (24h)</h3>
+                                        <div className="h-64">
+                                            <canvas ref={chartRef}></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 4. Stickers & GIF Gallery */}
+                            {activeChannel === 'stickers' && (
+                                <div className="max-w-3xl mx-auto space-y-6">
+                                    <div className="bg-white p-6 rounded-3xl border border-cream-200 shadow-sm">
+                                        <div className="flex justify-between items-center mb-4">
+                                            <h3 className="text-lg font-bold text-slate-800">無限擴充 GIF 梗圖牆</h3>
+                                        </div>
+                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                            {GIF_LIST.map((gif, idx) => (
+                                                <div key={idx} className="group relative rounded-xl overflow-hidden border border-cream-200 hover:shadow-md transition">
+                                                    <img src={gif} alt="gif" className="w-full h-32 object-cover" />
+                                                    <button 
+                                                        onClick={() => handleSendMessage(gif, 'gif')}
+                                                        className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-xs font-bold transition"
+                                                    >
+                                                        發送到對話框
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-white p-6 rounded-3xl border border-cream-200 shadow-sm">
+                                        <div className="flex justify-between items-center mb-4">
+                                            <h3 className="text-lg font-bold text-slate-800">專屬可愛 Emoji 表情包</h3>
+                                            <button onClick={downloadEmojiPack} className="text-xs bg-cute-yellow hover:bg-yellow-300 font-bold px-3 py-1.5 rounded-xl transition">
+                                                📥 一鍵下載表情包 (TXT)
+                                            </button>
+                                        </div>
+                                        <div className="flex flex-wrap gap-3 text-3xl">
+                                            {EMOJI_LIST.map((emo, idx) => (
+                                                <span key={idx} onClick={() => handleSendMessage(emo, 'text')} className="cursor-pointer hover:scale-125 transition transform p-2 rounded-xl hover:bg-cream-100">
+                                                    {emo}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                        </div>
+
+                        {/* MESSAGE INPUT BAR (Visible on Chat Channel) */}
+                        {activeChannel === 'general' && (
+                            <div className="p-4 bg-white border-t border-cream-200 relative">
+                                
+                                {/* Emoji Picker Popover */}
+                                {showEmojiPicker && (
+                                    <div className="absolute bottom-20 left-4 bg-white p-4 rounded-2xl shadow-xl border border-cream-300 grid grid-cols-6 gap-2 text-2xl z-30">
+                                        {EMOJI_LIST.map((emo, i) => (
+                                            <button key={i} onClick={() => { setInputMsg(prev => prev + emo); setShowEmojiPicker(false); }} className="hover:bg-cream-100 p-1 rounded-lg">
+                                                {emo}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* GIF Picker Popover */}
+                                {showGifPicker && (
+                                    <div className="absolute bottom-20 left-12 bg-white p-3 rounded-2xl shadow-xl border border-cream-300 grid grid-cols-2 gap-2 z-30 max-w-xs">
+                                        {GIF_LIST.map((gif, i) => (
+                                            <img key={i} src={gif} onClick={() => handleSendMessage(gif, 'gif')} className="w-full h-20 object-cover rounded-xl cursor-pointer hover:opacity-80 transition" />
+                                        ))}
+                                    </div>
+                                )}
+
+                                <div className="flex items-center space-x-2 bg-cream-50 p-2 rounded-2xl border border-cream-300">
+                                    <button onClick={() => { setShowEmojiPicker(!showEmojiPicker); setShowGifPicker(false); }} className="p-2 text-slate-400 hover:text-cute-purple text-xl transition">
+                                        😊
+                                    </button>
+                                    <button onClick={() => { setShowGifPicker(!showGifPicker); setShowEmojiPicker(false); }} className="p-2 text-slate-400 hover:text-cute-pink text-xs font-bold border border-slate-300 rounded-md transition">
+                                        GIF
+                                    </button>
+                                    <input 
+                                        type="text" 
+                                        placeholder={`在 #${roomCode} 發送訊息...`}
+                                        className="flex-1 bg-transparent px-2 text-sm focus:outline-none text-slate-700"
+                                        value={inputMsg}
+                                        onChange={(e) => setInputMsg(e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                                    />
+                                    <button onClick={() => handleSendMessage()} className="w-10 h-10 bg-cute-purple hover:bg-purple-700 text-white rounded-xl flex items-center justify-center transition shadow-sm">
+                                        <i className="fa-solid fa-paper-plane text-sm"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* RIGHT SIDEBAR: Online Users */}
+                    <div className="hidden lg:flex w-56 bg-cream-50 border-l border-cream-300 flex-col p-4">
+                        <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
+                            在線成員 — {Object.keys(onlineUsers).length}
+                        </div>
+                        <div className="space-y-3 overflow-y-auto flex-1">
+                            {Object.keys(onlineUsers).map(uid => {
+                                const u = onlineUsers[uid];
+                                return (
+                                    <div key={uid} className="flex items-center space-x-2.5">
+                                        <div className="relative">
+                                            <div className="w-8 h-8 bg-cute-lavender text-white rounded-full flex items-center justify-center text-xs font-bold">
+                                                {u.displayName ? u.displayName[0] : 'U'}
+                                            </div>
+                                            <span className="w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white absolute bottom-0 right-0"></span>
+                                        </div>
+                                        <span className="text-sm font-semibold text-slate-700 truncate">{u.displayName}</span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                </div>
+            );
+        }
+
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+</html>
