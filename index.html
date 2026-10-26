@@ -88,7 +88,6 @@
       50% { opacity: 0.85; transform: scale(1.03); }
     }
 
-    /* 千千靜聽 / Winamp 經典面板樣式 */
     .winamp-player {
       background: linear-gradient(135deg, #22252a 0%, #15171a 100%);
       border: 2px solid #4a525d;
@@ -122,10 +121,6 @@
     let firebaseAuth, firebaseDB;
     let authObj, dbObj;
 
-    const DEFAULT_AVATARS = Array.from({ length: 20 }, (_, i) => 
-      `https://api.dicebear.com/7.x/bottts/svg?seed=avatar_${i + 1}&backgroundColor=6366f1,ec4899,10b981,f59e0b,8b5cf6`
-    );
-
     const PRESET_EMOJIS = ["😀", "😂", "😍", "🥳", "😎", "👍", "❤️", "🔥", "🎉", "✨", "🚀", "💡", "😭", "🙈", "🤝", "💯", "🙏", "🍕", "🎮", "🎵"];
     const PRESET_GIFS = [
       { name: "Dance", url: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExcDdtY25vbjNwc3J4Nzhsc2U1bW10dHFwNnh4ZnBndzN1eGtxZXRveSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/blSTtZehjAZ8I/giphy.gif" },
@@ -137,14 +132,18 @@
     function App() {
       const [firebaseReady, setFirebaseReady] = useState(false);
       const [user, setUser] = useState(null);
-      const [authMode, setAuthMode] = useState('login'); // 'login' or 'register'
+      const [authMode, setAuthMode] = useState('login');
       const [emailInput, setEmailInput] = useState('');
       const [passwordInput, setPasswordInput] = useState('');
       const [nickname, setNickname] = useState(localStorage.getItem('easychat_nickname') || '');
-      const [userAvatar, setUserAvatar] = useState(localStorage.getItem('easychat_avatar') || DEFAULT_AVATARS[0]);
+      
+      // 入口處預設空白（未輸入圖片網址前無頭像）
+      const [userAvatar, setUserAvatar] = useState(localStorage.getItem('easychat_avatar') || '');
 
-      const [roomCode, setRoomCode] = useState('');
-      const [joinedRoom, setJoinedRoom] = useState(null);
+      // 讀取 F5 前記住的房間號碼
+      const [roomCode, setRoomCode] = useState(sessionStorage.getItem('easychat_current_room') || '');
+      const [joinedRoom, setJoinedRoom] = useState(sessionStorage.getItem('easychat_current_room') || null);
+      
       const [roomName, setRoomName] = useState('通用討論區');
       const [roomIcon, setRoomIcon] = useState('💬');
       const [activeTab, setActiveTab] = useState('chat');
@@ -157,12 +156,11 @@
       const [lastSaved, setLastSaved] = useState(null);
       const [isOnline, setIsOnline] = useState(navigator.onLine);
 
-      const [showAvatarPicker, setShowAvatarPicker] = useState(false);
       const [showShareModal, setShowShareModal] = useState(false);
       const [showEmojiPicker, setShowEmojiPicker] = useState(false);
       const [toastMsg, setToastMsg] = useState('');
 
-      // 千千靜聽 DJ 播放室狀態
+      // JJ放歌給妳聽 (原千千靜聽) DJ 播放室狀態
       const [playlist, setPlaylist] = useState([
         { title: '【Lo-Fi Beats】Chill Hop Relaxing Stream', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3' },
         { title: '【Synthwave 80s】Neon City Lights', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3' },
@@ -211,7 +209,6 @@
             onAuthStateChanged(authObj, async (u) => {
               if (u) {
                 setUser(u);
-                // 從 Firebase 載入使用者個人資料 (暱稱與頭像)
                 const userRef = firebaseDB.ref(dbObj, `users/${u.uid}`);
                 const snapshot = await firebaseDB.get(userRef);
                 if (snapshot.exists()) {
@@ -248,6 +245,8 @@
         const initialRoom = params.get('room');
         if (initialRoom) {
           setRoomCode(initialRoom);
+          setJoinedRoom(initialRoom);
+          sessionStorage.setItem('easychat_current_room', initialRoom);
         }
 
         return () => {
@@ -269,6 +268,9 @@
 
       useEffect(() => {
         if (!joinedRoom || !dbObj || !firebaseDB) return;
+
+        // 保持房間記憶於 Session
+        sessionStorage.setItem('easychat_current_room', joinedRoom);
 
         const roomRef = firebaseDB.ref(dbObj, `rooms/${joinedRoom}/messages`);
         const metaRef = firebaseDB.ref(dbObj, `rooms/${joinedRoom}/metadata`);
@@ -302,7 +304,6 @@
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       }, [messages]);
 
-      // QR Code 生成修復
       useEffect(() => {
         if (showShareModal && qrCodeRef.current && joinedRoom) {
           const shareUrl = `${window.location.origin}${window.location.pathname}?room=${joinedRoom}`;
@@ -324,7 +325,6 @@
         }
       }, [showShareModal, joinedRoom]);
 
-      // Firebase 登入 / 註冊處理
       const handleAuthSubmit = async (e) => {
         e.preventDefault();
         if (!emailInput || !passwordInput) {
@@ -342,7 +342,6 @@
             const newUser = userCred.user;
             await firebaseAuth.updateProfile(newUser, { displayName: nickname });
             
-            // 儲存至 Realtime Database
             if (dbObj) {
               await firebaseDB.set(firebaseDB.ref(dbObj, `users/${newUser.uid}`), {
                 nickname: nickname,
@@ -354,7 +353,7 @@
             localStorage.setItem('easychat_avatar', userAvatar);
             triggerToast('註冊成功並已自動登入！');
           } else {
-            const userCred = await firebaseAuth.signInWithEmailAndPassword(authObj, emailInput, passwordInput);
+            await firebaseAuth.signInWithEmailAndPassword(authObj, emailInput, passwordInput);
             triggerToast('登入成功！');
           }
         } catch (err) {
@@ -377,8 +376,14 @@
 
         localStorage.setItem('easychat_nickname', nickname);
         localStorage.setItem('easychat_avatar', userAvatar);
+        sessionStorage.setItem('easychat_current_room', code);
         setJoinedRoom(code);
         triggerToast(`成功進入房間區 #${code}`);
+      };
+
+      const handleLeaveRoom = () => {
+        sessionStorage.removeItem('easychat_current_room');
+        setJoinedRoom(null);
       };
 
       const handleSendMessage = (content, type = 'text') => {
@@ -418,17 +423,16 @@
         triggerToast('房間資訊已更新！');
       };
 
-      // 更換頭像 (點擊頭像自訂圖片網址)
       const handleChangeAvatarByUrl = () => {
         const newUrl = prompt('請輸入您的新頭像圖片網址 (URL):', userAvatar);
-        if (newUrl && newUrl.trim()) {
+        if (newUrl !== null) {
           const trimmed = newUrl.trim();
           setUserAvatar(trimmed);
           localStorage.setItem('easychat_avatar', trimmed);
           if (dbObj && user) {
             firebaseDB.set(firebaseDB.ref(dbObj, `users/${user.uid}/avatar`), trimmed);
           }
-          triggerToast('頭像已成功更新！');
+          triggerToast(trimmed ? '頭像已成功更新！' : '已清空頭像！');
         }
       };
 
@@ -617,25 +621,35 @@
                   </form>
                 </div>
               ) : (
-                /* 進入房間設定 */
+                /* 進入房間設定 (頭像預設空白，貼網址後才顯示) */
                 <form onSubmit={handleJoinRoom} className="space-y-5">
                   <div>
-                    <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-2">個人頭像 (點擊可更換網址)</label>
+                    <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-2">個人頭像 (貼上網址後顯示)</label>
                     <div className="flex items-center gap-4 bg-gray-50 dark:bg-[#1e1f22] p-3 rounded-2xl border border-gray-200 dark:border-gray-700">
-                      <img 
-                        src={userAvatar} 
-                        onClick={handleChangeAvatarByUrl}
-                        className="w-14 h-14 rounded-2xl border-2 border-indigo-500 object-cover bg-white cursor-pointer hover:opacity-85 transition" 
-                        title="點擊更換頭像網址"
-                      />
-                      <div>
-                        <p className="text-xs font-bold">{nickname || user.email}</p>
+                      {userAvatar ? (
+                        <img 
+                          src={userAvatar} 
+                          onClick={handleChangeAvatarByUrl}
+                          className="w-14 h-14 rounded-2xl border-2 border-indigo-500 object-cover bg-white cursor-pointer hover:opacity-85 transition" 
+                          title="點擊更換頭像網址"
+                        />
+                      ) : (
+                        <div 
+                          onClick={handleChangeAvatarByUrl}
+                          className="w-14 h-14 rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-600 bg-gray-200 dark:bg-gray-800 flex items-center justify-center text-gray-400 cursor-pointer hover:border-indigo-500 transition"
+                          title="點擊輸入圖片網址"
+                        >
+                          <i className="fa-solid fa-user text-2xl"></i>
+                        </div>
+                      )}
+                      <div className="flex-1 overflow-hidden">
+                        <p className="text-xs font-bold truncate">{nickname || user.email}</p>
                         <button 
                           type="button" 
                           onClick={handleChangeAvatarByUrl}
-                          className="mt-1 text-xs text-indigo-600 dark:text-indigo-400 font-bold underline"
+                          className="mt-1 text-xs text-indigo-600 dark:text-indigo-400 font-bold underline block"
                         >
-                          更換圖片網址
+                          {userAvatar ? '更換圖片網址' : '+ 輸入圖片網址'}
                         </button>
                       </div>
                     </div>
@@ -712,7 +726,7 @@
             <div 
               onClick={() => setActiveTab('dj')} 
               className={`w-12 h-12 rounded-2xl flex items-center justify-center cursor-pointer transition-all ${activeTab === 'dj' ? 'bg-indigo-600 text-white rounded-xl shadow-lg' : 'bg-white/60 dark:bg-gray-800 text-gray-600 dark:text-gray-300'}`}
-              title="千千靜聽 DJ 播音室"
+              title="JJ放歌給妳聽 DJ 播音室"
             >
               <i className="fa-solid fa-compact-disc text-xl"></i>
             </div>
@@ -738,7 +752,7 @@
                 <i className="fa-solid fa-mobile-screen-button text-lg"></i>
               </button>
               <button 
-                onClick={() => setJoinedRoom(null)} 
+                onClick={handleLeaveRoom} 
                 className="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center"
                 title="離開房間"
               >
@@ -786,13 +800,22 @@
 
               <div className="p-3 bg-[var(--bg-tertiary)] border-t border-[var(--border-color)] flex items-center justify-between">
                 <div className="flex items-center gap-2.5 overflow-hidden">
-                  {/* 點擊自己頭像更換圖片網址 */}
-                  <img 
-                    src={userAvatar} 
-                    onClick={handleChangeAvatarByUrl}
-                    className="w-9 h-9 rounded-xl border border-indigo-500 bg-white object-cover shrink-0 cursor-pointer hover:opacity-80 transition" 
-                    title="點擊更換頭像網址" 
-                  />
+                  {userAvatar ? (
+                    <img 
+                      src={userAvatar} 
+                      onClick={handleChangeAvatarByUrl}
+                      className="w-9 h-9 rounded-xl border border-indigo-500 bg-white object-cover shrink-0 cursor-pointer hover:opacity-80 transition" 
+                      title="點擊更換頭像網址" 
+                    />
+                  ) : (
+                    <div 
+                      onClick={handleChangeAvatarByUrl}
+                      className="w-9 h-9 rounded-xl border border-dashed border-gray-400 bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-500 cursor-pointer hover:border-indigo-500 shrink-0 transition"
+                      title="點擊輸入圖片網址"
+                    >
+                      <i className="fa-solid fa-user text-sm"></i>
+                    </div>
+                  )}
                   <div className="truncate">
                     <p className="text-xs font-bold truncate">{nickname}</p>
                     <p className="text-[10px] text-emerald-500 font-semibold flex items-center gap-1">
@@ -856,7 +879,13 @@
 
                   {messages.map((m) => (
                     <div key={m.id} className="flex items-start gap-3 group hover:bg-black/5 dark:hover:bg-white/5 p-2 rounded-2xl transition">
-                      <img src={m.avatar || DEFAULT_AVATARS[0]} className="w-10 h-10 rounded-2xl bg-white border border-gray-200 dark:border-gray-700 object-cover shrink-0" />
+                      {m.avatar ? (
+                        <img src={m.avatar} className="w-10 h-10 rounded-2xl bg-white border border-gray-200 dark:border-gray-700 object-cover shrink-0" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-2xl bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-500 shrink-0">
+                          <i className="fa-solid fa-user text-sm"></i>
+                        </div>
+                      )}
                       <div className="flex-1 overflow-hidden">
                         <div className="flex items-baseline gap-2">
                           <span className="font-bold text-sm">{m.sender}</span>
@@ -915,7 +944,7 @@
               </div>
             )}
 
-            {/* 千千靜聽 / Winamp 風格 DJ 播放室 */}
+            {/* JJ放歌給妳聽 DJ 播放室 */}
             {activeTab === 'dj' && (
               <div className="flex-1 p-6 overflow-y-auto space-y-6 flex flex-col items-center">
                 <div className="w-full max-w-2xl winamp-player rounded-xl p-5 text-emerald-400">
@@ -923,7 +952,7 @@
                   <div className="flex items-center justify-between border-b border-gray-700 pb-3 mb-4">
                     <div className="flex items-center gap-2">
                       <i className="fa-solid fa-compact-disc text-amber-400 text-xl animate-spin"></i>
-                      <h3 className="font-bold text-sm tracking-wider text-gray-200">千千靜聽 (QianQian DJ Studio) v5.5</h3>
+                      <h3 className="font-bold text-sm tracking-wider text-gray-200">JJ放歌給妳聽 (JJ DJ Studio) v5.5</h3>
                     </div>
                     <span className="text-xs bg-emerald-950 text-emerald-300 px-2 py-0.5 rounded font-mono border border-emerald-800">320kbps 44kHz STEREO</span>
                   </div>
