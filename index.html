@@ -12,6 +12,11 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   
+  <!-- iOS & Android App Icons -->
+  <link rel="apple-touch-icon" href="./icon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="./icon.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="./icon.png">
+
   <!-- Tailwind CSS & FontAwesome Icons -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -26,11 +31,10 @@
   <!-- Babel Standalone for JSX compilation -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-  <!-- Export Helpers: SheetJS (XLSX), html2canvas, jsPDF, Chart.js -->
+  <!-- Export Helpers: SheetJS (XLSX), html2canvas, jsPDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
@@ -39,7 +43,6 @@
       touch-action: manipulation;
     }
     
-    /* Scrollbar Aesthetics */
     ::-webkit-scrollbar {
       width: 6px;
       height: 6px;
@@ -55,7 +58,6 @@
       background: rgba(107, 114, 128, 0.7);
     }
 
-    /* Soft Warm Cream Theme Variables */
     .theme-cream {
       --bg-primary: #FAF8F5;
       --bg-secondary: #F3EFEA;
@@ -67,7 +69,6 @@
       --border-color: #E2DACF;
     }
 
-    /* Discord Dark Theme Variables */
     .theme-dark {
       --bg-primary: #313338;
       --bg-secondary: #2b2d31;
@@ -102,11 +103,9 @@
 <body class="theme-cream antialiased select-none overflow-hidden bg-[var(--bg-primary)] text-[var(--text-main)] transition-colors duration-200">
   <div id="root"></div>
 
-  <!-- React Application Logic -->
   <script type="text/babel">
-    const { useState, useEffect, useRef, useMemo } = React;
+    const { useState, useEffect, useRef } = React;
 
-    // Firebase Modular SDK imports via ESM dynamic imports
     let firebaseAuth, firebaseDB;
     let authObj, dbObj;
 
@@ -119,80 +118,56 @@
       { name: "Dance", url: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExcDdtY25vbjNwc3J4Nzhsc2U1bW10dHFwNnh4ZnBndzN1eGtxZXRveSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/blSTtZehjAZ8I/giphy.gif" },
       { name: "Party", url: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExcDRrbXZrbDZhZXhhNHYxOHl6a3EwdXAwNXNndjJ6cjhkYzFncnlyYSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/l3V0lsG3X72MrvAC4/giphy.gif" },
       { name: "Cat Vibe", url: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExOHp1ZjAwaWtrZWd6OXN0dWhjcXB5OGdxdW4xZHpsbWF0NXBsNGQzZSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/jpbnoe3UIa8TU8LM13/giphy.gif" },
-      { name: "Popcorn", url: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbDVqbzV6YmI3dm8yODV3aHZhdHZrbm1iYXp1NmpxcDVxcWJhdDNwYiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/NipFetnQOuKhW/giphy.gif" },
-      { name: "Clap", url: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExeGJ3eGtvMXg4MnRqNm4yaWNmNm5wMXRscjExd2I2ajdzaW92OXp6eSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/111ebonMs90YLu/giphy.gif" },
-      { name: "Mind Blown", url: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExdnplYTRkNHg1dGR6OHF2d3k5ZnNxeGZ6eHVzcWZ6czdqaGNuZnZqdyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/xT0xeJpnrWC4XWblEk/giphy.gif" }
+      { name: "Popcorn", url: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbDVqbzV6YmI3dm8yODV3aHZhdHZrbm1iYXp1NmpxcDVxcWJhdDNwYiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/NipFetnQOuKhW/giphy.gif" }
     ];
 
     function App() {
-      // Firebase State
       const [firebaseReady, setFirebaseReady] = useState(false);
       const [user, setUser] = useState(null);
       const [nickname, setNickname] = useState(localStorage.getItem('easychat_nickname') || '');
       const [userAvatar, setUserAvatar] = useState(localStorage.getItem('easychat_avatar') || DEFAULT_AVATARS[0]);
 
-      // Navigation & Layout State
       const [roomCode, setRoomCode] = useState('');
       const [joinedRoom, setJoinedRoom] = useState(null);
       const [roomName, setRoomName] = useState('通用討論區');
       const [roomIcon, setRoomIcon] = useState('💬');
-      const [activeTab, setActiveTab] = useState('chat'); // 'chat' | 'dj' | 'analytics'
+      const [activeTab, setActiveTab] = useState('chat');
       const [isDarkMode, setIsDarkMode] = useState(localStorage.getItem('easychat_dark') === 'true');
       const [isMobileDeviceView, setIsMobileDeviceView] = useState(window.innerWidth < 768);
       const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-      // Chat Data
       const [messages, setMessages] = useState([]);
       const [inputText, setInputText] = useState('');
       const [lastSaved, setLastSaved] = useState(null);
       const [isOnline, setIsOnline] = useState(navigator.onLine);
 
-      // Modals & UI Toggles
       const [showAvatarPicker, setShowAvatarPicker] = useState(false);
       const [showShareModal, setShowShareModal] = useState(false);
       const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-      const [isEditingRoomName, setIsEditingRoomName] = useState(false);
       const [toastMsg, setToastMsg] = useState('');
 
-      // DJ State
       const [playlist, setPlaylist] = useState([
         { id: 'dQw4w9WgXcQ', title: 'Rick Astley - Never Gonna Give You Up' },
         { id: 'L_LUpnjgPso', title: 'Official Lo-Fi Hip Hop Beats' }
       ]);
       const [currentSongIndex, setCurrentSongIndex] = useState(0);
-      const [isPlaying, setIsPlaying] = useState(false);
       const [isShuffleMode, setIsShuffleMode] = useState(false);
       const [newYoutubeUrl, setNewYoutubeUrl] = useState('');
 
       const messagesEndRef = useRef(null);
       const qrCodeRef = useRef(null);
 
-      // Toast Display Helper
       const triggerToast = (msg) => {
         setToastMsg(msg);
         setTimeout(() => setToastMsg(''), 3000);
       };
 
-      // 1. Initialize Firebase
       useEffect(() => {
         async function initFirebase() {
           try {
             const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js");
-            const { 
-              getAuth, 
-              signInAnonymously, 
-              onAuthStateChanged,
-              updateProfile 
-            } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js");
-            const { 
-              getDatabase, 
-              ref, 
-              push, 
-              onValue, 
-              set, 
-              remove, 
-              serverTimestamp 
-            } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js");
+            const { getAuth, signInAnonymously, onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js");
+            const { getDatabase, ref, push, onValue, set } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js");
 
             const firebaseConfig = {
               apiKey: "AIzaSyAc2DCat3WPv-vXt2kl4vIVla6qzMrUDJw",
@@ -208,31 +183,26 @@
             authObj = getAuth(app);
             dbObj = getDatabase(app);
 
-            firebaseAuth = { signInAnonymously, onAuthStateChanged, updateProfile };
-            firebaseDB = { ref, push, onValue, set, remove, serverTimestamp };
+            firebaseAuth = { signInAnonymously, onAuthStateChanged };
+            firebaseDB = { ref, push, onValue, set };
 
             onAuthStateChanged(authObj, (u) => {
-              if (u) {
-                setUser(u);
-              } else {
-                signInAnonymously(authObj).catch(console.error);
-              }
+              if (u) setUser(u);
+              else signInAnonymously(authObj).catch(console.error);
             });
 
             setFirebaseReady(true);
           } catch (err) {
-            console.error("Firebase SDK init failed:", err);
+            console.error("Firebase init failed:", err);
           }
         }
         initFirebase();
 
-        // Network Monitor
         const handleOnline = () => setIsOnline(true);
         const handleOffline = () => setIsOnline(false);
         window.addEventListener('online', handleOnline);
         window.addEventListener('offline', handleOffline);
 
-        // Parse Direct Invite Link from URL (?room=123)
         const params = new URLSearchParams(window.location.search);
         const initialRoom = params.get('room');
         if (initialRoom) {
@@ -245,7 +215,6 @@
         };
       }, []);
 
-      // Theme toggle effect
       useEffect(() => {
         if (isDarkMode) {
           document.body.classList.remove('theme-cream');
@@ -257,14 +226,12 @@
         localStorage.setItem('easychat_dark', isDarkMode);
       }, [isDarkMode]);
 
-      // Firebase Realtime Messages Sync
       useEffect(() => {
         if (!joinedRoom || !dbObj || !firebaseDB) return;
 
         const roomRef = firebaseDB.ref(dbObj, `rooms/${joinedRoom}/messages`);
         const metaRef = firebaseDB.ref(dbObj, `rooms/${joinedRoom}/metadata`);
 
-        // Listen for messages
         const unsubscribeMessages = firebaseDB.onValue(roomRef, (snapshot) => {
           const val = snapshot.val();
           if (val) {
@@ -276,7 +243,6 @@
           setLastSaved(new Date().toLocaleTimeString());
         });
 
-        // Listen for room metadata
         const unsubscribeMeta = firebaseDB.onValue(metaRef, (snapshot) => {
           const val = snapshot.val();
           if (val) {
@@ -291,12 +257,10 @@
         };
       }, [joinedRoom]);
 
-      // Auto scroll down on new messages
       useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       }, [messages]);
 
-      // Render QR Code in Share Modal
       useEffect(() => {
         if (showShareModal && qrCodeRef.current && joinedRoom) {
           const shareUrl = `${window.location.origin}${window.location.pathname}?room=${joinedRoom}`;
@@ -314,7 +278,6 @@
         }
       }, [showShareModal, joinedRoom, isDarkMode]);
 
-      // Join Room Action
       const handleJoinRoom = (e) => {
         e?.preventDefault();
         const code = roomCode.trim();
@@ -333,7 +296,6 @@
         triggerToast(`成功進入房間區 #${code}`);
       };
 
-      // Send Message
       const handleSendMessage = (content, type = 'text') => {
         if (!content.trim() || !joinedRoom || !dbObj) return;
 
@@ -351,17 +313,15 @@
         setShowEmojiPicker(false);
       };
 
-      // Clear Messages History
       const handleClearHistory = () => {
         if (!joinedRoom || !dbObj) return;
-        if (confirm(`確定要清空房間 #${joinedRoom} 的所有歷史訊息嗎？此動作無法復原。`)) {
+        if (confirm(`確定要清空房間 #${joinedRoom} 的所有歷史訊息嗎？`)) {
           const roomRef = firebaseDB.ref(dbObj, `rooms/${joinedRoom}/messages`);
           firebaseDB.set(roomRef, null);
           triggerToast('歷史訊息已成功清空');
         }
       };
 
-      // Update Room Metadata (Name & Icon)
       const handleUpdateRoomMeta = (newName, newIcon) => {
         if (!joinedRoom || !dbObj) return;
         const metaRef = firebaseDB.ref(dbObj, `rooms/${joinedRoom}/metadata`);
@@ -373,7 +333,6 @@
         triggerToast('房間資訊已更新！');
       };
 
-      // DJ Youtube Song Management
       const handleAddYoutubeUrl = () => {
         if (!newYoutubeUrl.trim()) return;
         let videoId = '';
@@ -386,70 +345,41 @@
         } catch(e){}
 
         if (videoId) {
-          setPlaylist([...playlist, { id: videoId, title: `歌曲 #${playlist.length + 1} (${videoId})` }]);
+          setPlaylist([...playlist, { id: videoId, title: `歌曲 #${playlist.length + 1}` }]);
           setNewYoutubeUrl('');
-          triggerToast('已成功加入歌曲清單！');
+          triggerToast('已加入歌曲清單！');
         } else {
-          triggerToast('請輸入有效的 Youtube 影片網址');
+          triggerToast('請輸入有效的 Youtube 網址');
         }
       };
 
-      // Excel Export & Import
       const exportToExcel = () => {
         if (messages.length === 0) {
-          triggerToast('目前尚無聊天紀錄可供匯出');
+          triggerToast('目前尚無聊天紀錄');
           return;
         }
         const data = messages.map(m => ({
           '發送者': m.sender,
-          '訊息內容': m.content,
+          '內容': m.content,
           '類型': m.type,
           '時間': new Date(m.timestamp).toLocaleString()
         }));
         const ws = XLSX.utils.json_to_sheet(data);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "ChatHistory");
-        XLSX.writeFile(wb, `EasyChat_Room_${joinedRoom}_Export.xlsx`);
+        XLSX.writeFile(wb, `EasyChat_Room_${joinedRoom}.xlsx`);
         triggerToast('Excel 匯出成功！');
       };
 
-      const importFromExcel = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-          try {
-            const bstr = evt.target.result;
-            const wb = XLSX.read(bstr, { type: 'binary' });
-            const wsName = wb.SheetNames[0];
-            const ws = wb.Sheets[wsName];
-            const data = XLSX.utils.sheet_to_json(ws);
-            
-            data.forEach(row => {
-              if (row['發送者'] && row['訊息內容']) {
-                handleSendMessage(`[匯入] ${row['發送者']}: ${row['訊息內容']}`);
-              }
-            });
-            triggerToast('Excel 訊息匯入成功！');
-          } catch(err) {
-            triggerToast('Excel 解析失敗，請確認檔案格式');
-          }
-        };
-        reader.readAsBinaryString(file);
-      };
-
-      // High-Res PNG & PDF Export
       const exportHighResPNG = async () => {
         const el = document.getElementById('chat-viewport');
         if (!el) return;
         try {
-          triggerToast('正在生成高畫質 PNG 截圖...');
+          triggerToast('正在生成 PNG 截圖...');
           const canvas = await html2canvas(el, { scale: 2, useCORS: true });
-          const imgData = canvas.toDataURL('image/png');
           const link = document.createElement('a');
-          link.download = `EasyChat_Room_${joinedRoom}_HD.png`;
-          link.href = imgData;
+          link.download = `EasyChat_Room_${joinedRoom}.png`;
+          link.href = canvas.toDataURL('image/png');
           link.click();
           triggerToast('PNG 下載完成！');
         } catch(e) {
@@ -461,28 +391,24 @@
         const el = document.getElementById('chat-viewport');
         if (!el) return;
         try {
-          triggerToast('正在生成 PDF 分析報表...');
+          triggerToast('正在生成 PDF...');
           const canvas = await html2canvas(el, { scale: 2, useCORS: true });
-          const imgData = canvas.toDataURL('image/png');
           const { jsPDF } = window.jspdf;
           const pdf = new jsPDF('p', 'mm', 'a4');
           const imgWidth = 210;
           const imgHeight = (canvas.height * imgWidth) / canvas.width;
-          pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+          pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, imgWidth, imgHeight);
           pdf.save(`EasyChat_Report_${joinedRoom}.pdf`);
-          triggerToast('PDF 報表下載完成！');
+          triggerToast('PDF 下載完成！');
         } catch(e) {
           triggerToast('PDF 生成失敗');
         }
       };
 
-      // Hard Cache Purge Update
       const handleHardUpdate = () => {
-        if (confirm('是否確認強制更新並清除本機網頁快取？這將確保載入最新版本程式碼。')) {
+        if (confirm('是否確認強制清除快取並重新載入？')) {
           if ('caches' in window) {
-            caches.keys().then(names => {
-              names.forEach(name => caches.delete(name));
-            });
+            caches.keys().then(names => names.forEach(name => caches.delete(name)));
           }
           localStorage.clear();
           sessionStorage.clear();
@@ -490,33 +416,25 @@
         }
       };
 
-      // App URL with Room Invite
       const inviteUrl = `${window.location.origin}${window.location.pathname}?room=${joinedRoom}`;
 
-      // -----------------------------------------------------------------------
-      // RENDER: Login / Room Selection Screen
-      // -----------------------------------------------------------------------
       if (!joinedRoom) {
         return (
           <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-[#F5EFE6] via-[#E8DFD8] to-[#DCD0C7] dark:from-[#1e1f22] dark:via-[#2b2d31] dark:to-[#111214]">
-            <div className="max-w-md w-full bg-white/90 dark:bg-[#2b2d31]/90 backdrop-blur-md rounded-3xl p-8 shadow-2xl border border-white/50 dark:border-gray-700/50 transition-all">
-              
-              {/* Header */}
+            <div className="max-w-md w-full bg-white/90 dark:bg-[#2b2d31]/90 backdrop-blur-md rounded-3xl p-8 shadow-2xl border border-white/50 dark:border-gray-700/50">
               <div className="text-center mb-6">
-                <div className="inline-flex items-center justify-center w-20 h-20 bg-indigo-500 text-white rounded-3xl shadow-lg mb-4 text-4xl transform hover:scale-105 transition-transform">
+                <div className="inline-flex items-center justify-center w-20 h-20 bg-indigo-500 text-white rounded-3xl shadow-lg mb-4 text-4xl">
                   <i className="fa-brands fa-discord"></i>
                 </div>
-                <h1 className="text-3xl font-extrabold text-gray-800 dark:text-white tracking-tight">EasyChat 專業聊天室</h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">商業級可愛風格 • 即時同步 • 跨平台支援</p>
+                <h1 className="text-3xl font-extrabold text-gray-800 dark:text-white">EasyChat 專業聊天室</h1>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">商業級跨平台即時同步</p>
               </div>
 
-              {/* Form */}
               <form onSubmit={handleJoinRoom} className="space-y-5">
-                {/* Avatar Preview & Selection */}
                 <div>
                   <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-2">選擇個人頭像</label>
                   <div className="flex items-center gap-4 bg-gray-50 dark:bg-[#1e1f22] p-3 rounded-2xl border border-gray-200 dark:border-gray-700">
-                    <img src={userAvatar} className="w-14 h-14 rounded-2xl border-2 border-indigo-500 object-cover shadow-sm bg-white" alt="Avatar" />
+                    <img src={userAvatar} className="w-14 h-14 rounded-2xl border-2 border-indigo-500 object-cover bg-white" alt="Avatar" />
                     <button 
                       type="button" 
                       onClick={() => setShowAvatarPicker(!showAvatarPicker)}
@@ -527,7 +445,6 @@
                   </div>
                 </div>
 
-                {/* Avatar Modal */}
                 {showAvatarPicker && (
                   <div className="p-4 bg-gray-100 dark:bg-[#1e1f22] rounded-2xl border border-gray-300 dark:border-gray-700 max-h-48 overflow-y-auto grid grid-cols-5 gap-2">
                     {DEFAULT_AVATARS.map((url, idx) => (
@@ -541,7 +458,6 @@
                   </div>
                 )}
 
-                {/* User Nickname */}
                 <div>
                   <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-2">使用者暱稱</label>
                   <div className="relative">
@@ -557,9 +473,8 @@
                   </div>
                 </div>
 
-                {/* Room Number */}
                 <div>
-                  <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-2">房間號碼 (例如: 101, 888)</label>
+                  <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-2">房間號碼 (例如: 101)</label>
                   <div className="relative">
                     <i className="fa-solid fa-hashtag absolute left-4 top-3.5 text-gray-400"></i>
                     <input 
@@ -574,39 +489,31 @@
                   </div>
                 </div>
 
-                {/* Join Button */}
                 <button 
                   type="submit" 
-                  className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl shadow-lg hover:shadow-indigo-500/30 transition transform active:scale-95 flex items-center justify-center gap-2"
+                  className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl shadow-lg transition flex items-center justify-center gap-2"
                 >
                   <span>立即進入對話區</span>
                   <i className="fa-solid fa-arrow-right"></i>
                 </button>
               </form>
 
-              {/* Status Footer */}
               <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between text-xs text-gray-500">
                 <span className="flex items-center gap-1.5">
                   <span className={`w-2.5 h-2.5 rounded-full ${isOnline ? 'bg-emerald-500' : 'bg-rose-500'}`}></span>
-                  {isOnline ? '系統連線正常' : '離線模式'}
+                  {isOnline ? '連線正常' : '離線模式'}
                 </span>
                 <button onClick={handleHardUpdate} className="text-gray-400 hover:text-indigo-500 underline">
-                  <i className="fa-solid fa-arrows-rotate mr-1"></i>極致重置快取
+                  <i className="fa-solid fa-arrows-rotate mr-1"></i>重置快取
                 </button>
               </div>
-
             </div>
           </div>
         );
       }
 
-      // -----------------------------------------------------------------------
-      // RENDER: Main Chat Application Workspace
-      // -----------------------------------------------------------------------
       return (
         <div className={`flex h-screen w-screen overflow-hidden ${isMobileDeviceView ? 'max-w-md mx-auto shadow-2xl border-x border-gray-300' : ''}`}>
-
-          {/* Toast Notification Popover */}
           {toastMsg && (
             <div className="fixed top-5 right-5 z-50 bg-indigo-600 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-bounce text-sm font-semibold">
               <i className="fa-solid fa-circle-check text-emerald-300 text-lg"></i>
@@ -614,71 +521,59 @@
             </div>
           )}
 
-          {/* 1. Left Sidebar Icon Rail */}
+          {/* Left Icon Rail */}
           <div className="w-16 bg-[#EFE8DF] dark:bg-[#1e1f22] flex flex-col items-center py-4 gap-4 border-r border-[var(--border-color)] z-20 shrink-0">
             <div 
               onClick={() => setActiveTab('chat')} 
-              className={`w-12 h-12 rounded-2xl flex items-center justify-center cursor-pointer transition-all ${activeTab === 'chat' ? 'bg-indigo-600 text-white rounded-xl shadow-lg scale-105' : 'bg-white/60 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-indigo-100'}`}
+              className={`w-12 h-12 rounded-2xl flex items-center justify-center cursor-pointer transition-all ${activeTab === 'chat' ? 'bg-indigo-600 text-white rounded-xl shadow-lg' : 'bg-white/60 dark:bg-gray-800 text-gray-600 dark:text-gray-300'}`}
               title="聊天主視窗"
             >
               <i className="fa-solid fa-comments text-xl"></i>
             </div>
-
             <div 
               onClick={() => setActiveTab('dj')} 
-              className={`w-12 h-12 rounded-2xl flex items-center justify-center cursor-pointer transition-all ${activeTab === 'dj' ? 'bg-indigo-600 text-white rounded-xl shadow-lg scale-105' : 'bg-white/60 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-indigo-100'}`}
-              title="派對 DJ 播音室"
+              className={`w-12 h-12 rounded-2xl flex items-center justify-center cursor-pointer transition-all ${activeTab === 'dj' ? 'bg-indigo-600 text-white rounded-xl shadow-lg' : 'bg-white/60 dark:bg-gray-800 text-gray-600 dark:text-gray-300'}`}
+              title="派對 DJ"
             >
               <i className="fa-solid fa-compact-disc text-xl"></i>
             </div>
-
             <div 
               onClick={() => setActiveTab('analytics')} 
-              className={`w-12 h-12 rounded-2xl flex items-center justify-center cursor-pointer transition-all ${activeTab === 'analytics' ? 'bg-indigo-600 text-white rounded-xl shadow-lg scale-105' : 'bg-white/60 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-indigo-100'}`}
-              title="數據分析中心"
+              className={`w-12 h-12 rounded-2xl flex items-center justify-center cursor-pointer transition-all ${activeTab === 'analytics' ? 'bg-indigo-600 text-white rounded-xl shadow-lg' : 'bg-white/60 dark:bg-gray-800 text-gray-600 dark:text-gray-300'}`}
+              title="分析中心"
             >
               <i className="fa-solid fa-chart-pie text-xl"></i>
             </div>
 
             <div className="mt-auto flex flex-col gap-3 items-center">
-              {/* Theme Toggle */}
               <button 
                 onClick={() => setIsDarkMode(!isDarkMode)} 
-                className="w-10 h-10 rounded-xl bg-white/60 dark:bg-gray-800 text-amber-500 dark:text-yellow-300 flex items-center justify-center hover:scale-110 transition"
-                title="切換日/夜間模式"
+                className="w-10 h-10 rounded-xl bg-white/60 dark:bg-gray-800 text-amber-500 dark:text-yellow-300 flex items-center justify-center"
               >
                 <i className={`fa-solid ${isDarkMode ? 'fa-sun' : 'fa-moon'} text-lg`}></i>
               </button>
-
-              {/* Mobile Simulator Toggle */}
               <button 
                 onClick={() => setIsMobileDeviceView(!isMobileDeviceView)} 
-                className={`w-10 h-10 rounded-xl flex items-center justify-center transition ${isMobileDeviceView ? 'bg-indigo-600 text-white' : 'bg-white/60 dark:bg-gray-800 text-gray-600 dark:text-gray-300'}`}
-                title="手機/平板模式切換"
+                className={`w-10 h-10 rounded-xl flex items-center justify-center ${isMobileDeviceView ? 'bg-indigo-600 text-white' : 'bg-white/60 dark:bg-gray-800 text-gray-600 dark:text-gray-300'}`}
               >
                 <i className="fa-solid fa-mobile-screen-button text-lg"></i>
               </button>
-
-              {/* Leave Room */}
               <button 
                 onClick={() => setJoinedRoom(null)} 
-                className="w-10 h-10 rounded-xl bg-rose-100 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center hover:bg-rose-600 hover:text-white transition"
-                title="退出房間"
+                className="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center"
               >
                 <i className="fa-solid fa-door-open text-lg"></i>
               </button>
             </div>
           </div>
 
-          {/* 2. Sub-Sidebar Channel List */}
+          {/* Sub Sidebar */}
           {!sidebarCollapsed && (
             <div className="w-56 bg-[var(--bg-secondary)] border-r border-[var(--border-color)] flex flex-col shrink-0 hidden md:flex">
-              {/* Room Header Info */}
               <div className="p-4 border-b border-[var(--border-color)] flex items-center justify-between">
                 <div className="flex items-center gap-2 overflow-hidden">
                   <span 
-                    className="text-2xl cursor-pointer hover:scale-125 transition" 
-                    title="雙擊編輯圖示"
+                    className="text-2xl cursor-pointer" 
                     onDoubleClick={() => {
                       const icon = prompt('輸入新圖示 (Emoji):', roomIcon);
                       if (icon) handleUpdateRoomMeta(roomName, icon);
@@ -688,8 +583,7 @@
                   </span>
                   <div>
                     <h2 
-                      className="font-bold text-sm tracking-tight truncate cursor-pointer hover:underline" 
-                      title="雙擊編輯房間名稱"
+                      className="font-bold text-sm truncate cursor-pointer hover:underline"
                       onDoubleClick={() => {
                         const name = prompt('修改房間名稱:', roomName);
                         if (name) handleUpdateRoomMeta(name, roomIcon);
@@ -702,7 +596,6 @@
                 </div>
               </div>
 
-              {/* Channel List */}
               <div className="p-3 space-y-1 overflow-y-auto flex-1">
                 <div className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider px-2 py-1">文字頻道</div>
                 <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-bold text-sm">
@@ -711,8 +604,7 @@
                 </div>
               </div>
 
-              {/* User Profile Footer */}
-              <div className="p-3 bg-[var(--bg-tertiary)] border-t border-[var(--border-color)] flex items-center justify-between">
+              <div className="p-3 bg-[var(--bg-tertiary)] border-t border-[var(--border-color)] flex items-center">
                 <div className="flex items-center gap-2.5 overflow-hidden">
                   <img src={userAvatar} className="w-9 h-9 rounded-xl border border-indigo-500 bg-white object-cover shrink-0" alt="me" />
                   <div className="truncate">
@@ -726,30 +618,23 @@
             </div>
           )}
 
-          {/* 3. Main Viewport Area */}
+          {/* Main Workspace */}
           <div className="flex-1 flex flex-col bg-[var(--bg-primary)] overflow-hidden relative">
-
-            {/* Top Workspace Header */}
             <header className="h-16 px-4 bg-[var(--bg-secondary)] border-b border-[var(--border-color)] flex items-center justify-between z-10 shrink-0">
               <div className="flex items-center gap-3">
-                <button 
-                  onClick={() => setSidebarCollapsed(!sidebarCollapsed)} 
-                  className="hidden md:block text-gray-500 hover:text-gray-800 dark:hover:text-white"
-                >
+                <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="hidden md:block text-gray-500">
                   <i className="fa-solid fa-bars text-lg"></i>
                 </button>
                 <div className="flex items-center gap-2">
                   <span className="text-xl">{roomIcon}</span>
                   <h3 className="font-bold text-base">{roomName}</h3>
-                  <span className="bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-300 text-xs font-mono font-bold px-2.5 py-1 rounded-full border border-indigo-200 dark:border-indigo-800">
+                  <span className="bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-300 text-xs font-mono font-bold px-2.5 py-1 rounded-full">
                     #{joinedRoom}
                   </span>
                 </div>
               </div>
 
-              {/* Action Toolbar */}
               <div className="flex items-center gap-2">
-                {/* PROMINENT INVITE BUTTON */}
                 <button 
                   onClick={() => setShowShareModal(true)}
                   className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center gap-2 pulse-animation"
@@ -758,59 +643,28 @@
                   <span>邀請連結 / QR Code</span>
                 </button>
 
-                {/* Clear History */}
-                <button 
-                  onClick={handleClearHistory} 
-                  className="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition" 
-                  title="快速刪除歷史訊息"
-                >
+                <button onClick={handleClearHistory} className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl" title="清空歷史">
                   <i className="fa-solid fa-trash-can"></i>
                 </button>
-
-                {/* PNG Export */}
-                <button 
-                  onClick={exportHighResPNG} 
-                  className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl transition text-xs font-semibold flex items-center gap-1"
-                  title="匯出高畫質 PNG"
-                >
+                <button onClick={exportHighResPNG} className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-200 rounded-xl text-xs font-semibold" title="PNG">
                   <i className="fa-solid fa-file-image"></i>
-                  <span className="hidden sm:inline">PNG</span>
                 </button>
-
-                {/* PDF Export */}
-                <button 
-                  onClick={exportPDFReport} 
-                  className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl transition text-xs font-semibold flex items-center gap-1"
-                  title="匯出高畫質 PDF"
-                >
+                <button onClick={exportPDFReport} className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-200 rounded-xl text-xs font-semibold" title="PDF">
                   <i className="fa-solid fa-file-pdf"></i>
-                  <span className="hidden sm:inline">PDF</span>
                 </button>
-
-                {/* Excel Export */}
-                <button 
-                  onClick={exportToExcel} 
-                  className="p-2 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-xl transition text-xs font-semibold flex items-center gap-1"
-                  title="匯出 Excel"
-                >
+                <button onClick={exportToExcel} className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-xl text-xs font-semibold" title="Excel">
                   <i className="fa-solid fa-file-excel"></i>
-                  <span className="hidden sm:inline">Excel</span>
                 </button>
               </div>
             </header>
 
-            {/* Dynamic Content View Area */}
             {activeTab === 'chat' && (
               <div className="flex-1 flex flex-col justify-between overflow-hidden relative">
-                
-                {/* Message Log Container */}
                 <div id="chat-viewport" className="flex-1 overflow-y-auto p-4 space-y-4">
-                  
-                  {/* Banner */}
-                  <div className="bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 rounded-2xl p-4 text-center max-w-md mx-auto my-4">
+                  <div className="bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 rounded-2xl p-4 text-center max-w-md mx-auto my-4">
                     <span className="text-3xl">{roomIcon}</span>
                     <h4 className="font-bold text-base mt-1">歡迎來到 {roomName}！</h4>
-                    <p className="text-xs text-[var(--text-muted)] mt-1">這是房間 #{joinedRoom} 的起點。分享邀請連結給朋友加入吧！</p>
+                    <p className="text-xs text-[var(--text-muted)] mt-1">房間 #{joinedRoom} 已同步連線。</p>
                   </div>
 
                   {messages.map((m) => (
@@ -823,10 +677,8 @@
                             {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </span>
                         </div>
-                        
-                        {/* Content Rendering */}
                         {m.type === 'image' || m.type === 'gif' ? (
-                          <img src={m.content} className="mt-2 max-w-xs max-h-60 rounded-2xl border border-gray-200 dark:border-gray-700 object-cover shadow-sm" />
+                          <img src={m.content} className="mt-2 max-w-xs max-h-60 rounded-2xl object-cover shadow-sm" />
                         ) : (
                           <p className="text-sm mt-0.5 whitespace-pre-wrap break-words">{m.content}</p>
                         )}
@@ -836,17 +688,12 @@
                   <div ref={messagesEndRef} />
                 </div>
 
-                {/* Emoji / GIF Popover */}
                 {showEmojiPicker && (
                   <div className="absolute bottom-20 left-4 z-30 bg-white dark:bg-[#2b2d31] border border-gray-200 dark:border-gray-700 rounded-3xl p-4 shadow-2xl w-80">
                     <div className="text-xs font-bold text-gray-500 uppercase mb-2">表情符號 (Emojis)</div>
                     <div className="grid grid-cols-5 gap-2 mb-4">
                       {PRESET_EMOJIS.map((emoji, i) => (
-                        <button 
-                          key={i} 
-                          onClick={() => handleSendMessage(emoji, 'text')}
-                          className="text-2xl hover:scale-125 transition p-1 text-center"
-                        >
+                        <button key={i} onClick={() => handleSendMessage(emoji, 'text')} className="text-2xl hover:scale-125 transition p-1 text-center">
                           {emoji}
                         </button>
                       ))}
@@ -854,35 +701,17 @@
                     <div className="text-xs font-bold text-gray-500 uppercase mb-2">GIF 梗圖庫</div>
                     <div className="grid grid-cols-3 gap-2 max-h-40 overflow-y-auto">
                       {PRESET_GIFS.map((gif, i) => (
-                        <img 
-                          key={i} 
-                          src={gif.url} 
-                          onClick={() => handleSendMessage(gif.url, 'gif')}
-                          className="w-full h-16 object-cover rounded-xl cursor-pointer hover:opacity-80 transition border border-gray-200 dark:border-gray-700" 
-                        />
+                        <img key={i} src={gif.url} onClick={() => handleSendMessage(gif.url, 'gif')} className="w-full h-16 object-cover rounded-xl cursor-pointer" />
                       ))}
                     </div>
                   </div>
                 )}
 
-                {/* Composer Bar */}
                 <div className="p-4 bg-[var(--bg-secondary)] border-t border-[var(--border-color)]">
-                  <div className="flex items-center gap-2 bg-[var(--bg-primary)] p-2 rounded-2xl border border-[var(--border-color)] shadow-inner">
-                    {/* Emoji Trigger */}
-                    <button 
-                      onClick={() => setShowEmojiPicker(!showEmojiPicker)} 
-                      className="p-2 text-amber-500 hover:bg-amber-100 dark:hover:bg-amber-950/50 rounded-xl transition text-lg"
-                    >
+                  <div className="flex items-center gap-2 bg-[var(--bg-primary)] p-2 rounded-2xl border border-[var(--border-color)]">
+                    <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="p-2 text-amber-500 hover:bg-amber-100 rounded-xl text-lg">
                       <i className="fa-solid fa-face-smile"></i>
                     </button>
-
-                    {/* Import Excel */}
-                    <label className="p-2 text-emerald-600 hover:bg-emerald-100 dark:hover:bg-emerald-950/50 rounded-xl transition cursor-pointer text-lg">
-                      <i className="fa-solid fa-file-import"></i>
-                      <input type="file" accept=".xlsx, .xls" onChange={importFromExcel} className="hidden" />
-                    </label>
-
-                    {/* Input Field */}
                     <input 
                       type="text" 
                       placeholder={`在 #${roomName} 發送訊息...`}
@@ -891,21 +720,14 @@
                       onKeyDown={(e) => e.key === 'Enter' && handleSendMessage(inputText, 'text')}
                       className="flex-1 bg-transparent text-sm focus:outline-none px-2 text-[var(--text-main)]"
                     />
-
-                    {/* Send Button */}
-                    <button 
-                      onClick={() => handleSendMessage(inputText, 'text')}
-                      className="p-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-md transition"
-                    >
+                    <button onClick={() => handleSendMessage(inputText, 'text')} className="p-2.5 bg-indigo-600 text-white rounded-xl shadow-md">
                       <i className="fa-solid fa-paper-plane"></i>
                     </button>
                   </div>
                 </div>
-
               </div>
             )}
 
-            {/* DJ Youtube Player View */}
             {activeTab === 'dj' && (
               <div className="flex-1 p-6 overflow-y-auto space-y-6">
                 <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-6 rounded-3xl shadow-xl flex items-center justify-between">
@@ -913,135 +735,80 @@
                     <h3 className="text-2xl font-black flex items-center gap-2">
                       <i className="fa-solid fa-compact-disc animate-spin"></i> 派對 DJ 播音室
                     </h3>
-                    <p className="text-xs text-purple-200 mt-1">即時新增多首 Youtube 歌曲建立播放清單</p>
+                    <p className="text-xs text-purple-200 mt-1">YouTube 播放清單</p>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <button 
-                      onClick={() => setIsShuffleMode(!isShuffleMode)} 
-                      className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${isShuffleMode ? 'bg-amber-400 text-gray-900 shadow-md' : 'bg-white/20 text-white'}`}
-                    >
-                      <i className="fa-solid fa-shuffle"></i> {isShuffleMode ? '隨機播放' : '依序播放'}
-                    </button>
-                  </div>
+                  <button 
+                    onClick={() => setIsShuffleMode(!isShuffleMode)} 
+                    className={`px-4 py-2 rounded-xl text-xs font-bold ${isShuffleMode ? 'bg-amber-400 text-gray-900' : 'bg-white/20 text-white'}`}
+                  >
+                    <i className="fa-solid fa-shuffle"></i> {isShuffleMode ? '隨機播放' : '依序播放'}
+                  </button>
                 </div>
 
-                {/* Add Video Input */}
                 <div className="flex gap-3">
                   <input 
                     type="text" 
-                    placeholder="貼上 Youtube 影片網址 (例如: https://www.youtube.com/watch?v=...)"
+                    placeholder="貼上 Youtube 影片網址..."
                     value={newYoutubeUrl}
                     onChange={(e) => setNewYoutubeUrl(e.target.value)}
                     className="flex-1 px-4 py-3 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-2xl text-sm focus:outline-none"
                   />
-                  <button 
-                    onClick={handleAddYoutubeUrl}
-                    className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-2xl shadow-md hover:bg-indigo-700 transition"
-                  >
+                  <button onClick={handleAddYoutubeUrl} className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-2xl shadow-md">
                     加入清單
                   </button>
                 </div>
 
-                {/* Youtube Player Embed */}
                 {playlist.length > 0 && (
                   <div className="aspect-video w-full rounded-3xl overflow-hidden shadow-2xl border border-gray-200 dark:border-gray-700">
-                    <iframe 
-                      className="w-full h-full"
-                      src={`https://www.youtube.com/embed/${playlist[currentSongIndex]?.id}?autoplay=1`}
-                      title="YouTube player"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                    ></iframe>
+                    <iframe className="w-full h-full" src={`https://www.youtube.com/embed/${playlist[currentSongIndex]?.id}?autoplay=1`} allowFullScreen></iframe>
                   </div>
                 )}
-
-                {/* Playlist */}
-                <div className="bg-[var(--bg-secondary)] p-4 rounded-3xl border border-[var(--border-color)]">
-                  <h4 className="font-bold text-sm mb-3">播放清單 ({playlist.length} 首)</h4>
-                  <div className="space-y-2">
-                    {playlist.map((song, idx) => (
-                      <div 
-                        key={idx} 
-                        onClick={() => setCurrentSongIndex(idx)}
-                        className={`p-3 rounded-2xl flex items-center justify-between cursor-pointer transition ${currentSongIndex === idx ? 'bg-indigo-600 text-white font-bold' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}
-                      >
-                        <span className="text-sm truncate">{idx + 1}. {song.title}</span>
-                        {currentSongIndex === idx && <i className="fa-solid fa-volume-high animate-bounce"></i>}
-                      </div>
-                    ))}
-                  </div>
-                </div>
               </div>
             )}
 
-            {/* Analytics View */}
             {activeTab === 'analytics' && (
               <div className="flex-1 p-6 overflow-y-auto space-y-6">
                 <h3 className="text-2xl font-black">📊 房間數據分析中心</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="p-5 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 rounded-3xl">
+                  <div className="p-5 bg-indigo-50 dark:bg-indigo-950/45 border border-indigo-200 rounded-3xl">
                     <p className="text-xs text-indigo-500 font-bold uppercase">總訊息數</p>
                     <p className="text-3xl font-black mt-1">{messages.length}</p>
                   </div>
-                  <div className="p-5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-3xl">
+                  <div className="p-5 bg-emerald-50 dark:bg-emerald-950/45 border border-emerald-200 rounded-3xl">
                     <p className="text-xs text-emerald-500 font-bold uppercase">圖片/GIF 數</p>
                     <p className="text-3xl font-black mt-1">{messages.filter(m => m.type !== 'text').length}</p>
                   </div>
-                  <div className="p-5 bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 rounded-3xl">
+                  <div className="p-5 bg-purple-50 dark:bg-purple-950/45 border border-purple-200 rounded-3xl">
                     <p className="text-xs text-purple-500 font-bold uppercase">上次同步時間</p>
                     <p className="text-lg font-bold mt-1">{lastSaved || '同步中...'}</p>
                   </div>
                 </div>
               </div>
             )}
-
           </div>
 
-          {/* 4. Prominent Share Modal & QR Code Display */}
           {showShareModal && (
             <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-              <div className="bg-white dark:bg-[#2b2d31] rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-gray-200 dark:border-gray-700 text-center relative animate-scaleUp">
-                <button 
-                  onClick={() => setShowShareModal(false)}
-                  className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-white"
-                >
+              <div className="bg-white dark:bg-[#2b2d31] rounded-3xl p-6 max-w-sm w-full shadow-2xl text-center relative">
+                <button onClick={() => setShowShareModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-white">
                   <i className="fa-solid fa-xmark text-xl"></i>
                 </button>
-
                 <h3 className="text-xl font-extrabold mb-1">邀請好友加入房間</h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">掃描 QR Code 或複製網址即可直接進入</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">掃描 QR Code 或複製網址</p>
 
-                {/* QR Container */}
                 <div className="bg-gray-100 dark:bg-[#1e1f22] p-4 rounded-2xl inline-block mb-4 shadow-inner">
                   <div ref={qrCodeRef} className="flex justify-center"></div>
                 </div>
 
-                {/* URL Input Box */}
                 <div className="flex items-center gap-2 bg-gray-50 dark:bg-[#1e1f22] p-2 rounded-2xl border border-gray-200 dark:border-gray-700 mb-4">
-                  <input 
-                    type="text" 
-                    readOnly 
-                    value={inviteUrl}
-                    className="flex-1 bg-transparent text-xs font-mono px-2 text-gray-600 dark:text-gray-300 focus:outline-none"
-                  />
-                  <button 
-                    onClick={() => {
-                      navigator.clipboard.writeText(inviteUrl);
-                      triggerToast('邀請連結已成功複製到剪貼簿！');
-                    }}
-                    className="px-4 py-2 bg-indigo-600 text-white font-bold text-xs rounded-xl hover:bg-indigo-700 transition"
-                  >
+                  <input type="text" readOnly value={inviteUrl} className="flex-1 bg-transparent text-xs font-mono px-2 focus:outline-none" />
+                  <button onClick={() => { navigator.clipboard.writeText(inviteUrl); triggerToast('已複製邀請連結！'); }} className="px-4 py-2 bg-indigo-600 text-white font-bold text-xs rounded-xl">
                     複製
                   </button>
                 </div>
-
-                <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
-                  <i className="fa-solid fa-bolt mr-1"></i>點擊網址連結的用戶將自動直接進入該房間
-                </p>
               </div>
             </div>
           )}
-
         </div>
       );
     }
