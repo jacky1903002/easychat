@@ -331,25 +331,23 @@
           triggerToast('請輸入電子郵件與密碼');
           return;
         }
-        if (authMode === 'register' && !nickname.trim()) {
-          triggerToast('請輸入您的聊天暱稱');
-          return;
-        }
 
         try {
           if (authMode === 'register') {
             const userCred = await firebaseAuth.createUserWithEmailAndPassword(authObj, emailInput, passwordInput);
             const newUser = userCred.user;
-            await firebaseAuth.updateProfile(newUser, { displayName: nickname });
+            const defaultNick = nickname.trim() || emailInput.split('@')[0];
+            await firebaseAuth.updateProfile(newUser, { displayName: defaultNick });
             
             if (dbObj) {
               await firebaseDB.set(firebaseDB.ref(dbObj, `users/${newUser.uid}`), {
-                nickname: nickname,
+                nickname: defaultNick,
                 avatar: userAvatar,
                 email: emailInput
               });
             }
-            localStorage.setItem('easychat_nickname', nickname);
+            setNickname(defaultNick);
+            localStorage.setItem('easychat_nickname', defaultNick);
             localStorage.setItem('easychat_avatar', userAvatar);
             triggerToast('註冊成功並已自動登入！');
           } else {
@@ -369,12 +367,12 @@
           triggerToast('請輸入3位數房間號碼');
           return;
         }
-        if (!nickname.trim()) {
-          triggerToast('請設定您的聊天暱稱');
-          return;
-        }
 
-        localStorage.setItem('easychat_nickname', nickname);
+        // 若沒有暱稱，自動給予預設名稱，不阻擋進入
+        const currentNickname = nickname.trim() || (user?.email ? user.email.split('@')[0] : `訪客_${Math.floor(Math.random() * 9000 + 1000)}`);
+        
+        setNickname(currentNickname);
+        localStorage.setItem('easychat_nickname', currentNickname);
         localStorage.setItem('easychat_avatar', userAvatar);
         sessionStorage.setItem('easychat_current_room', code);
         setJoinedRoom(code);
@@ -384,6 +382,30 @@
       const handleLeaveRoom = () => {
         sessionStorage.removeItem('easychat_current_room');
         setJoinedRoom(null);
+      };
+
+      // 點擊左下角頭像或名字可以隨時設定/更改暱稱與頭像
+      const handleChangeProfile = () => {
+        const newName = prompt('請輸入您的聊天暱稱:', nickname);
+        if (newName !== null) {
+          const trimmedName = newName.trim() || '無名氏';
+          setNickname(trimmedName);
+          localStorage.setItem('easychat_nickname', trimmedName);
+          if (dbObj && user) {
+            firebaseDB.set(firebaseDB.ref(dbObj, `users/${user.uid}/nickname`), trimmedName);
+          }
+        }
+
+        const newUrl = prompt('請輸入您的新頭像圖片網址 (URL):', userAvatar);
+        if (newUrl !== null) {
+          const trimmedUrl = newUrl.trim();
+          setUserAvatar(trimmedUrl);
+          localStorage.setItem('easychat_avatar', trimmedUrl);
+          if (dbObj && user) {
+            firebaseDB.set(firebaseDB.ref(dbObj, `users/${user.uid}/avatar`), trimmedUrl);
+          }
+        }
+        triggerToast('個人資料已更新！');
       };
 
       const handleSendMessage = (content, type = 'text') => {
@@ -421,19 +443,6 @@
           updatedAt: Date.now()
         });
         triggerToast('房間資訊已更新！');
-      };
-
-      const handleChangeAvatarByUrl = () => {
-        const newUrl = prompt('請輸入您的新頭像圖片網址 (URL):', userAvatar);
-        if (newUrl !== null) {
-          const trimmed = newUrl.trim();
-          setUserAvatar(trimmed);
-          localStorage.setItem('easychat_avatar', trimmed);
-          if (dbObj && user) {
-            firebaseDB.set(firebaseDB.ref(dbObj, `users/${user.uid}/avatar`), trimmed);
-          }
-          triggerToast(trimmed ? '頭像已成功更新！' : '已清空頭像！');
-        }
       };
 
       const handleTogglePlay = () => {
@@ -542,7 +551,6 @@
 
       const inviteUrl = `${window.location.origin}${window.location.pathname}?room=${joinedRoom}`;
 
-      // 若 Firebase 尚未初始化完成，顯示載入中畫面
       if (!firebaseReady) {
         return (
           <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-[#F5EFE6] via-[#E8DFD8] to-[#DCD0C7] dark:from-[#1e1f22] dark:via-[#2b2d31] dark:to-[#111214]">
@@ -595,19 +603,6 @@
                   </div>
 
                   <form onSubmit={handleAuthSubmit} className="space-y-4">
-                    {authMode === 'register' && (
-                      <div>
-                        <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-1">聊天暱稱 (無須審核)</label>
-                        <input 
-                          type="text" 
-                          required
-                          placeholder="輸入您的顯示暱稱..."
-                          value={nickname}
-                          onChange={(e) => setNickname(e.target.value)}
-                          className="w-full px-4 py-3 bg-gray-50 dark:bg-[#1e1f22] border border-gray-200 dark:border-gray-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white"
-                        />
-                      </div>
-                    )}
                     <div>
                       <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-1">電子郵件 (Firebase Email)</label>
                       <input 
@@ -641,32 +636,32 @@
               ) : (
                 <form onSubmit={handleJoinRoom} className="space-y-5">
                   <div>
-                    <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-2">個人頭像 (貼上網址後顯示)</label>
-                    <div className="flex items-center gap-4 bg-gray-50 dark:bg-[#1e1f22] p-3 rounded-2xl border border-gray-200 dark:border-gray-700">
+                    <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-2">個人頭像 (可進聊天室後點擊設定)</label>
+                    <div className="flex items-center gap-4 bg-gray-50 dark:bg-[#1e1f22] p-3 rounded-2xl border border-gray-200 dark:border-gray-750">
                       {userAvatar ? (
                         <img 
                           src={userAvatar} 
-                          onClick={handleChangeAvatarByUrl}
+                          onClick={handleChangeProfile}
                           className="w-14 h-14 rounded-2xl border-2 border-indigo-500 object-cover bg-white cursor-pointer hover:opacity-85 transition" 
-                          title="點擊更換頭像網址"
+                          title="點擊設定頭像"
                         />
                       ) : (
                         <div 
-                          onClick={handleChangeAvatarByUrl}
+                          onClick={handleChangeProfile}
                           className="w-14 h-14 rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-600 bg-gray-200 dark:bg-gray-800 flex items-center justify-center text-gray-400 cursor-pointer hover:border-indigo-500 transition"
-                          title="點擊輸入圖片網址"
+                          title="點擊設定頭像"
                         >
                           <i className="fa-solid fa-user text-2xl"></i>
                         </div>
                       )}
                       <div className="flex-1 overflow-hidden">
-                        <p className="text-xs font-bold truncate">{nickname || user.email}</p>
+                        <p className="text-xs font-bold truncate">{nickname || '未設定暱稱 (可直接進入)'}</p>
                         <button 
                           type="button" 
-                          onClick={handleChangeAvatarByUrl}
+                          onClick={handleChangeProfile}
                           className="mt-1 text-xs text-indigo-600 dark:text-indigo-400 font-bold underline block cursor-pointer"
                         >
-                          {userAvatar ? '更換圖片網址' : '+ 輸入圖片網址'}
+                          + 設定暱稱與頭像
                         </button>
                       </div>
                     </div>
@@ -816,25 +811,21 @@
               </div>
 
               <div className="p-3 bg-[var(--bg-tertiary)] border-t border-[var(--border-color)] flex items-center justify-between">
-                <div className="flex items-center gap-2.5 overflow-hidden">
+                <div className="flex items-center gap-2.5 overflow-hidden cursor-pointer" onClick={handleChangeProfile} title="點擊設定暱稱與頭像">
                   {userAvatar ? (
                     <img 
                       src={userAvatar} 
-                      onClick={handleChangeAvatarByUrl}
-                      className="w-9 h-9 rounded-xl border border-indigo-500 bg-white object-cover shrink-0 cursor-pointer hover:opacity-80 transition" 
-                      title="點擊更換頭像網址" 
+                      className="w-9 h-9 rounded-xl border border-indigo-500 bg-white object-cover shrink-0 hover:opacity-80 transition" 
                     />
                   ) : (
                     <div 
-                      onClick={handleChangeAvatarByUrl}
-                      className="w-9 h-9 rounded-xl border border-dashed border-gray-400 bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-500 cursor-pointer hover:border-indigo-500 shrink-0 transition"
-                      title="點擊輸入圖片網址"
+                      className="w-9 h-9 rounded-xl border border-dashed border-gray-400 bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-500 shrink-0 hover:border-indigo-500 transition"
                     >
                       <i className="fa-solid fa-user text-sm"></i>
                     </div>
                   )}
                   <div className="truncate">
-                    <p className="text-xs font-bold truncate">{nickname}</p>
+                    <p className="text-xs font-bold truncate">{nickname || '點擊設定暱稱'}</p>
                     <p className="text-[10px] text-emerald-500 font-semibold flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block"></span> 線上
                     </p>
