@@ -137,10 +137,7 @@
       const [passwordInput, setPasswordInput] = useState('');
       const [nickname, setNickname] = useState(localStorage.getItem('easychat_nickname') || '');
       
-      // 入口處預設空白（未輸入圖片網址前無頭像）
       const [userAvatar, setUserAvatar] = useState(localStorage.getItem('easychat_avatar') || '');
-
-      // 讀取 F5 前記住的房間號碼
       const [roomCode, setRoomCode] = useState(sessionStorage.getItem('easychat_current_room') || '');
       const [joinedRoom, setJoinedRoom] = useState(sessionStorage.getItem('easychat_current_room') || null);
       
@@ -160,7 +157,6 @@
       const [showEmojiPicker, setShowEmojiPicker] = useState(false);
       const [toastMsg, setToastMsg] = useState('');
 
-      // JJ放歌給妳聽 (原千千靜聽) DJ 播放室狀態
       const [playlist, setPlaylist] = useState([
         { title: '【Lo-Fi Beats】Chill Hop Relaxing Stream', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3' },
         { title: '【Synthwave 80s】Neon City Lights', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3' },
@@ -232,6 +228,7 @@
             setFirebaseReady(true);
           } catch (err) {
             console.error("Firebase init failed:", err);
+            triggerToast('Firebase 初始化失敗，請檢查網路連線');
           }
         }
         initFirebase();
@@ -269,7 +266,6 @@
       useEffect(() => {
         if (!joinedRoom || !dbObj || !firebaseDB) return;
 
-        // 保持房間記憶於 Session
         sessionStorage.setItem('easychat_current_room', joinedRoom);
 
         const roomRef = firebaseDB.ref(dbObj, `rooms/${joinedRoom}/messages`);
@@ -327,6 +323,10 @@
 
       const handleAuthSubmit = async (e) => {
         e.preventDefault();
+        if (!firebaseReady || !authObj) {
+          triggerToast('系統仍在初始化中，請稍候再試...');
+          return;
+        }
         if (!emailInput || !passwordInput) {
           triggerToast('請輸入電子郵件與密碼');
           return;
@@ -436,7 +436,6 @@
         }
       };
 
-      // DJ 播放控制
       const handleTogglePlay = () => {
         if (!audioRef.current) return;
         if (isPlaying) {
@@ -543,10 +542,30 @@
 
       const inviteUrl = `${window.location.origin}${window.location.pathname}?room=${joinedRoom}`;
 
-      // 若尚未登入 Firebase 或未進入房間
+      // 若 Firebase 尚未初始化完成，顯示載入中畫面
+      if (!firebaseReady) {
+        return (
+          <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-[#F5EFE6] via-[#E8DFD8] to-[#DCD0C7] dark:from-[#1e1f22] dark:via-[#2b2d31] dark:to-[#111214]">
+            <div className="text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-indigo-500 text-white rounded-3xl shadow-lg mb-4 animate-spin text-2xl">
+                <i className="fa-solid fa-spinner"></i>
+              </div>
+              <h2 className="text-xl font-bold text-gray-800 dark:text-white">EasyChat 正在連接伺服器...</h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">請稍候，正在初始化 Firebase 驗證與資料庫</p>
+            </div>
+          </div>
+        );
+      }
+
       if (!user || !joinedRoom) {
         return (
           <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-[#F5EFE6] via-[#E8DFD8] to-[#DCD0C7] dark:from-[#1e1f22] dark:via-[#2b2d31] dark:to-[#111214]">
+            {toastMsg && (
+              <div className="fixed top-5 right-5 z-50 bg-indigo-600 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-bounce text-sm font-semibold">
+                <i className="fa-solid fa-circle-check text-emerald-300 text-lg"></i>
+                <span>{toastMsg}</span>
+              </div>
+            )}
             <div className="max-w-md w-full bg-white/90 dark:bg-[#2b2d31]/90 backdrop-blur-md rounded-3xl p-8 shadow-2xl border border-white/50 dark:border-gray-700/50">
               <div className="text-center mb-6">
                 <div className="inline-flex items-center justify-center w-20 h-20 bg-indigo-500 text-white rounded-3xl shadow-lg mb-4 text-4xl">
@@ -557,7 +576,6 @@
               </div>
 
               {!user ? (
-                /* 登入 / 註冊表單 */
                 <div className="space-y-4">
                   <div className="flex rounded-2xl bg-gray-100 dark:bg-[#1e1f22] p-1 mb-4">
                     <button 
@@ -614,14 +632,13 @@
                     </div>
                     <button 
                       type="submit" 
-                      className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl shadow-lg transition"
+                      className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold rounded-2xl shadow-lg transition cursor-pointer"
                     >
                       {authMode === 'login' ? '登入系統' : '完成註冊並登入'}
                     </button>
                   </form>
                 </div>
               ) : (
-                /* 進入房間設定 (頭像預設空白，貼網址後才顯示) */
                 <form onSubmit={handleJoinRoom} className="space-y-5">
                   <div>
                     <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-2">個人頭像 (貼上網址後顯示)</label>
@@ -647,7 +664,7 @@
                         <button 
                           type="button" 
                           onClick={handleChangeAvatarByUrl}
-                          className="mt-1 text-xs text-indigo-600 dark:text-indigo-400 font-bold underline block"
+                          className="mt-1 text-xs text-indigo-600 dark:text-indigo-400 font-bold underline block cursor-pointer"
                         >
                           {userAvatar ? '更換圖片網址' : '+ 輸入圖片網址'}
                         </button>
@@ -674,7 +691,7 @@
                   <div className="flex gap-2">
                     <button 
                       type="submit" 
-                      className="flex-1 py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl shadow-lg transition flex items-center justify-center gap-2"
+                      className="flex-1 py-4 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold rounded-2xl shadow-lg transition flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <span>進入對話區</span>
                       <i className="fa-solid fa-arrow-right"></i>
@@ -682,7 +699,7 @@
                     <button 
                       type="button" 
                       onClick={() => authObj.signOut()} 
-                      className="px-4 py-4 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-bold rounded-2xl"
+                      className="px-4 py-4 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-bold rounded-2xl cursor-pointer"
                       title="登出"
                     >
                       <i className="fa-solid fa-right-from-bracket"></i>
@@ -696,7 +713,7 @@
                   <span className={`w-2.5 h-2.5 rounded-full ${isOnline ? 'bg-emerald-500' : 'bg-rose-500'}`}></span>
                   {isOnline ? '連線正常' : '離線模式'}
                 </span>
-                <button onClick={handleHardUpdate} className="text-gray-400 hover:text-indigo-500 underline">
+                <button onClick={handleHardUpdate} className="text-gray-400 hover:text-indigo-500 underline cursor-pointer">
                   <i className="fa-solid fa-arrows-rotate mr-1"></i>重置快取
                 </button>
               </div>
@@ -741,19 +758,19 @@
             <div className="mt-auto flex flex-col gap-3 items-center">
               <button 
                 onClick={() => setIsDarkMode(!isDarkMode)} 
-                className="w-10 h-10 rounded-xl bg-white/60 dark:bg-gray-800 text-amber-500 dark:text-yellow-300 flex items-center justify-center"
+                className="w-10 h-10 rounded-xl bg-white/60 dark:bg-gray-800 text-amber-500 dark:text-yellow-300 flex items-center justify-center cursor-pointer"
               >
                 <i className={`fa-solid ${isDarkMode ? 'fa-sun' : 'fa-moon'} text-lg`}></i>
               </button>
               <button 
                 onClick={() => setIsMobileDeviceView(!isMobileDeviceView)} 
-                className={`w-10 h-10 rounded-xl flex items-center justify-center ${isMobileDeviceView ? 'bg-indigo-600 text-white' : 'bg-white/60 dark:bg-gray-800 text-gray-600 dark:text-gray-300'}`}
+                className={`w-10 h-10 rounded-xl flex items-center justify-center cursor-pointer ${isMobileDeviceView ? 'bg-indigo-600 text-white' : 'bg-white/60 dark:bg-gray-800 text-gray-600 dark:text-gray-300'}`}
               >
                 <i className="fa-solid fa-mobile-screen-button text-lg"></i>
               </button>
               <button 
                 onClick={handleLeaveRoom} 
-                className="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center"
+                className="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center cursor-pointer"
                 title="離開房間"
               >
                 <i className="fa-solid fa-door-open text-lg"></i>
@@ -831,7 +848,7 @@
           <div className="flex-1 flex flex-col bg-[var(--bg-primary)] overflow-hidden relative">
             <header className="h-16 px-4 bg-[var(--bg-secondary)] border-b border-[var(--border-color)] flex items-center justify-between z-10 shrink-0">
               <div className="flex items-center gap-3">
-                <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="hidden md:block text-gray-500">
+                <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="hidden md:block text-gray-500 cursor-pointer">
                   <i className="fa-solid fa-bars text-lg"></i>
                 </button>
                 <div className="flex items-center gap-2">
@@ -846,22 +863,22 @@
               <div className="flex items-center gap-2">
                 <button 
                   onClick={() => setShowShareModal(true)}
-                  className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center gap-2 pulse-animation"
+                  className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center gap-2 pulse-animation cursor-pointer"
                 >
                   <i className="fa-solid fa-qrcode text-sm"></i>
                   <span>邀請連結 / QR Code</span>
                 </button>
 
-                <button onClick={handleClearHistory} className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl" title="清空歷史">
+                <button onClick={handleClearHistory} className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl cursor-pointer" title="清空歷史">
                   <i className="fa-solid fa-trash-can"></i>
                 </button>
-                <button onClick={exportHighResPNG} className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-200 rounded-xl text-xs font-semibold" title="PNG">
+                <button onClick={exportHighResPNG} className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-200 rounded-xl text-xs font-semibold cursor-pointer" title="PNG">
                   <i className="fa-solid fa-file-image"></i>
                 </button>
-                <button onClick={exportPDFReport} className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-200 rounded-xl text-xs font-semibold" title="PDF">
+                <button onClick={exportPDFReport} className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-200 rounded-xl text-xs font-semibold cursor-pointer" title="PDF">
                   <i className="fa-solid fa-file-pdf"></i>
                 </button>
-                <button onClick={exportToExcel} className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-xl text-xs font-semibold" title="Excel">
+                <button onClick={exportToExcel} className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-xl text-xs font-semibold cursor-pointer" title="Excel">
                   <i className="fa-solid fa-file-excel"></i>
                 </button>
               </div>
@@ -909,7 +926,7 @@
                     <div className="text-xs font-bold text-gray-500 uppercase mb-2">表情符號 (Emojis)</div>
                     <div className="grid grid-cols-5 gap-2 mb-4">
                       {PRESET_EMOJIS.map((emoji, i) => (
-                        <button key={i} onClick={() => handleSendMessage(emoji, 'text')} className="text-2xl hover:scale-125 transition p-1 text-center">
+                        <button key={i} onClick={() => handleSendMessage(emoji, 'text')} className="text-2xl hover:scale-125 transition p-1 text-center cursor-pointer">
                           {emoji}
                         </button>
                       ))}
@@ -925,7 +942,7 @@
 
                 <div className="p-4 bg-[var(--bg-secondary)] border-t border-[var(--border-color)]">
                   <div className="flex items-center gap-2 bg-[var(--bg-primary)] p-2 rounded-2xl border border-[var(--border-color)]">
-                    <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="p-2 text-amber-500 hover:bg-amber-100 rounded-xl text-lg">
+                    <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="p-2 text-amber-500 hover:bg-amber-100 rounded-xl text-lg cursor-pointer">
                       <i className="fa-solid fa-face-smile"></i>
                     </button>
                     <input 
@@ -936,7 +953,7 @@
                       onKeyDown={(e) => e.key === 'Enter' && handleSendMessage(inputText, 'text')}
                       className="flex-1 bg-transparent text-sm focus:outline-none px-2 text-[var(--text-main)]"
                     />
-                    <button onClick={() => handleSendMessage(inputText, 'text')} className="p-2.5 bg-indigo-600 text-white rounded-xl shadow-md">
+                    <button onClick={() => handleSendMessage(inputText, 'text')} className="p-2.5 bg-indigo-600 text-white rounded-xl shadow-md cursor-pointer">
                       <i className="fa-solid fa-paper-plane"></i>
                     </button>
                   </div>
@@ -948,7 +965,6 @@
             {activeTab === 'dj' && (
               <div className="flex-1 p-6 overflow-y-auto space-y-6 flex flex-col items-center">
                 <div className="w-full max-w-2xl winamp-player rounded-xl p-5 text-emerald-400">
-                  {/* Top Bar */}
                   <div className="flex items-center justify-between border-b border-gray-700 pb-3 mb-4">
                     <div className="flex items-center gap-2">
                       <i className="fa-solid fa-compact-disc text-amber-400 text-xl animate-spin"></i>
@@ -957,14 +973,12 @@
                     <span className="text-xs bg-emerald-950 text-emerald-300 px-2 py-0.5 rounded font-mono border border-emerald-800">320kbps 44kHz STEREO</span>
                   </div>
 
-                  {/* LCD Display & Visualizer Screen */}
                   <div className="winamp-screen p-4 rounded-lg mb-4 flex flex-col gap-3 shadow-inner">
                     <div className="flex justify-between items-center text-xs">
                       <span className="text-amber-300 font-bold truncate">🎵 [{currentSongIndex + 1}] {playlist[currentSongIndex]?.title}</span>
                       <span className="font-mono text-emerald-400">{isPlaying ? '▶ PLAYING' : '⏸ PAUSED'}</span>
                     </div>
 
-                    {/* Spectrum Analyzer Bars Animation */}
                     <div className="flex items-end justify-between h-14 bg-black/50 px-2 pt-2 rounded border border-emerald-900/40">
                       {[40, 70, 30, 90, 60, 85, 45, 95, 55, 75, 40, 80, 65, 50, 90, 35, 70, 60, 80, 50].map((h, i) => (
                         <div 
@@ -976,7 +990,6 @@
                     </div>
                   </div>
 
-                  {/* Hidden HTML5 Audio Element */}
                   <audio 
                     ref={audioRef} 
                     src={playlist[currentSongIndex]?.url} 
@@ -984,21 +997,20 @@
                     onEnded={handleNextSong}
                   />
 
-                  {/* Control Buttons & Volume */}
                   <div className="flex flex-wrap items-center justify-between gap-4 mb-5 bg-[#181a1d] p-3 rounded-lg border border-gray-700">
                     <div className="flex items-center gap-2">
-                      <button onClick={handlePrevSong} className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition shadow">
+                      <button onClick={handlePrevSong} className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition shadow cursor-pointer">
                         <i className="fa-solid fa-backward-step"></i>
                       </button>
-                      <button onClick={handleTogglePlay} className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-black font-extrabold rounded text-xs transition shadow flex items-center gap-1">
+                      <button onClick={handleTogglePlay} className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-black font-extrabold rounded text-xs transition shadow flex items-center gap-1 cursor-pointer">
                         <i className={`fa-solid ${isPlaying ? 'fa-pause' : 'fa-play'}`}></i> {isPlaying ? '暫停' : '播放'}
                       </button>
-                      <button onClick={handleNextSong} className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition shadow">
+                      <button onClick={handleNextSong} className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition shadow cursor-pointer">
                         <i className="fa-solid fa-forward-step"></i>
                       </button>
                       <button 
                         onClick={() => setIsShuffle(!isShuffle)} 
-                        className={`px-3 py-2 rounded text-xs font-bold transition shadow ${isShuffle ? 'bg-amber-500 text-black' : 'bg-gray-700 text-gray-300'}`}
+                        className={`px-3 py-2 rounded text-xs font-bold transition shadow cursor-pointer ${isShuffle ? 'bg-amber-500 text-black' : 'bg-gray-700 text-gray-300'}`}
                       >
                         <i className="fa-solid fa-shuffle"></i>
                       </button>
@@ -1021,7 +1033,6 @@
                     </div>
                   </div>
 
-                  {/* Equalizer (EQ) Panel */}
                   <div className="bg-[#181a1d] p-3 rounded-lg border border-gray-700 mb-5">
                     <div className="text-xs font-bold text-gray-400 uppercase mb-3 flex items-center justify-between">
                       <span>等化器效果調節 (Equalizer)</span>
@@ -1045,7 +1056,6 @@
                     </div>
                   </div>
 
-                  {/* Playlist & Add Song */}
                   <div className="bg-[#181a1d] p-3 rounded-lg border border-gray-700">
                     <div className="text-xs font-bold text-gray-400 uppercase mb-2">播放清單 (Playlist)</div>
                     <div className="max-h-36 overflow-y-auto space-y-1 mb-3 pr-1">
@@ -1069,7 +1079,7 @@
                         onChange={(e) => setCustomAudioUrl(e.target.value)}
                         className="flex-1 px-3 py-2 bg-black border border-gray-700 rounded text-xs text-emerald-400 focus:outline-none"
                       />
-                      <button onClick={handleAddCustomSong} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded text-xs transition">
+                      <button onClick={handleAddCustomSong} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded text-xs transition cursor-pointer">
                         加入清單
                       </button>
                     </div>
@@ -1104,7 +1114,7 @@
           {showShareModal && (
             <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
               <div className="bg-white dark:bg-[#2b2d31] rounded-3xl p-6 max-w-sm w-full shadow-2xl text-center relative">
-                <button onClick={() => setShowShareModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-white">
+                <button onClick={() => setShowShareModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-white cursor-pointer">
                   <i className="fa-solid fa-xmark text-xl"></i>
                 </button>
                 <h3 className="text-xl font-extrabold mb-1">邀請好友加入房間</h3>
@@ -1116,7 +1126,7 @@
 
                 <div className="flex items-center gap-2 bg-gray-50 dark:bg-[#1e1f22] p-2 rounded-2xl border border-gray-200 dark:border-gray-700 mb-4">
                   <input type="text" readOnly value={inviteUrl} className="flex-1 bg-transparent text-xs font-mono px-2 focus:outline-none" />
-                  <button onClick={() => { navigator.clipboard.writeText(inviteUrl); triggerToast('已複製邀請連結！'); }} className="px-4 py-2 bg-indigo-600 text-white font-bold text-xs rounded-xl">
+                  <button onClick={() => { navigator.clipboard.writeText(inviteUrl); triggerToast('已複製邀請連結！'); }} className="px-4 py-2 bg-indigo-600 text-white font-bold text-xs rounded-xl cursor-pointer">
                     複製
                   </button>
                 </div>
